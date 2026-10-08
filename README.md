@@ -1,24 +1,28 @@
-# Three Lens Market Dashboard (separate app)
+# Three Lens Market Dashboard
 
-This is a separate project from your existing **Breakout Dashboard** at `deantil-breakout-dashboard-breakout-dashboard-bva1o5.streamlit.app`. Pick all listed US exchanges, daily SPY holdings (S&P 500), or a custom watchlist. It retrieves symbols from Nasdaq Trader and State Street and daily price history from Yahoo Finance. Data coverage and service availability are not guaranteed.
+This repository powers [your Streamlit dashboard](https://three-lens-market-dashboard.streamlit.app/). It is separate from the older Breakout Dashboard.
 
-## Deploy
+## What it does today
 
-1. Create a **new GitHub repository**, for example `deantil/three-lens-market-dashboard`. Do not use or change the repository connected to your existing Breakout Dashboard.
-2. Put these three files in the new repository.
-3. In Streamlit Community Cloud, choose **Create app**, select the new repository and `main` branch, and set the main file to `streamlit_app.py`.
-4. Give the new Streamlit app a distinct name such as `three-lens-market-dashboard` (or `breakout-dashboard-lab`). Leave the existing Streamlit app and its URL alone.
-5. Deploy. No API key is required by this version.
+- Scans US-listed stocks using the Nasdaq Trader listing files, SPY holdings, or your own watchlist.
+- Uses daily price history from Yahoo Finance for breakout, momentum, trend, and volume screens.
+- Looks up one stock by ticker.
+- Includes an options-income shortlist for cash-secured puts and covered calls, based on a limited set of liquid stocks that pass the stock screen.
 
-The first scan of thousands of symbols can take several minutes and may be constrained by public data-provider rate limits. Universe count means symbols returned by the listing endpoint; it does not mean every symbol will have usable price history.
+The app is for research and paper planning. It does not connect to a brokerage or place trades. Yahoo Finance data can be delayed, incomplete, unavailable, or rate-limited. The options probability is a simplified estimate, not a measured win rate or promise.
 
-## Strategy notes
+## Deployment
 
-- **Trader breakout:** transparent approximation based on the pasted notes: trend, recent breakout, positive momentum, and confirming volume.
-- **Nirvana Omni inspired:** public Power Move concept approximation (price, momentum, and volume agreement). This does not reproduce proprietary Nirvana signals or licensed software.
-- **Birbia inspired:** public-feature approximation with transparent long/short-term screens and a downloadable journal. It does not reproduce Birbia's private AI or score rules, and it does not analyze option chains.
-- **Stock lookup:** enter a ticker to view available chart history and the dashboard's calculated technical checks.
-- **Options income scan:** automatically checks option chains for a shortlist of the most liquid, account-affordable stocks, then compares covered calls and cash-secured puts by breakeven, estimated profit probability, premium, and max gain/loss. Free market-data endpoints can fail or return delayed quotes; the scan does not cover every listed contract.
+Streamlit Community Cloud is connected to this repository. Changes pushed to the `main` branch trigger a new build of the app. The main file is `streamlit_app.py`.
 
-The dashboard is for research and risk planning, not individualized investment advice. Option probability is a simplified implied-volatility model, not a guaranteed chance or measured win rate. Option writers can lose substantial amounts; read the OCC options disclosure. The $1,000-to-$10,000 target tracker is arithmetic only, not a return forecast or promise.
+## Current operating limits
 
+The current scanner is for US-listed stocks and daily price bars. It can be opened at any time, but it does not provide guaranteed real-time quotes or run stock-market trades around the clock. Streamlit Community Cloud may hibernate an app after 12 hours without traffic.
+
+A future 24/7 asset class such as crypto needs its own market-data provider, symbol list, trading calendar, and data-freshness checks. The current stock and option rules should not be copied over as if they were validated for that asset class.
+
+## Risk notes
+
+A standard equity option contract generally represents 100 shares. A cash-secured put may require enough cash to buy 100 shares; a covered call requires owning 100 shares. Option writing can lose substantially more than the premium received. Review the [OCC options disclosure](https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document) before considering options.
+
+The $1,000-to-$10,000 goal tracker shows arithmetic only. It is not a forecast or a promise of returns.
