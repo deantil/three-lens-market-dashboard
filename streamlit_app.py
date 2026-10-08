@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from io import StringIO
+from io import BytesIO, StringIO
 import requests
 import pandas as pd
 import streamlit as st
@@ -21,7 +21,39 @@ st.title("Three Lens Market Dashboard")
 st.caption("A research and risk-planning tool. Signals are educational, delayed market data may apply, and no return is guaranteed.")
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def get_universe():
+def get_universe(universe_name, custom_text=""):
+    """Load broad US listings, daily SPY holdings, or the user's own ticker list."""
+    if universe_name == "My watchlist":
+        cleaned = [x.strip().upper().replace(".", "-") for x in custom_text.replace(",", "\n").splitlines()]
+        symbols = sorted(set(x for x in cleaned if x))
+        if not symbols:
+            raise ValueError("Add at least one ticker to My watchlist.")
+        return symbols
+
+    if universe_name == "SPY holdings (S&P 500)":
+        url = "https://www.ssga.com/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx"
+        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
+        response.raise_for_status()
+        raw = pd.read_excel(BytesIO(response.content), header=None, dtype=str)
+        header_row = None
+        symbol_column = None
+        for i in range(min(20, len(raw))):
+            values = raw.iloc[i].astype(str).str.strip().str.lower().tolist()
+            for candidate in ("ticker", "symbol"):
+                if candidate in values:
+                    header_row, symbol_column = i, values.index(candidate)
+                    break
+            if header_row is not None:
+                break
+        if header_row is None:
+            raise ValueError("Could not find the ticker column in State Street's SPY holdings file.")
+        symbols = raw.iloc[header_row + 1:, symbol_column].dropna().astype(str).str.strip().tolist()
+        symbols = [x.replace(".", "-") for x in symbols if x and x.lower() not in {"nan", "cash", "usd", "spdr s&p 500 etf trust"}]
+        symbols = [x for x in symbols if x.isascii() and any(ch.isalpha() for ch in x)]
+        if not symbols:
+            raise ValueError("State Street's SPY holdings file returned no stock tickers.")
+        return sorted(set(symbols))
+
     """Load Nasdaq Trader's official daily files for Nasdaq and other US listings."""
     base = "https://www.nasdaqtrader.com/dynamic/SymDir/"
     headers = {"User-Agent": "Mozilla/5.0 (compatible; market-dashboard/1.0)"}
@@ -87,6 +119,10 @@ with st.sidebar:
     risk_pct = st.slider("Risk per trade (%)", 0.25, 2.0, 0.5, 0.25)
     min_price = st.number_input("Minimum share price", min_value=0.0, value=5.0, step=1.0)
     min_dollar_vol = st.number_input("Minimum average daily $ volume (M)", min_value=0.0, value=10.0, step=5.0)
+    universe_name = st.selectbox("Stock universe", ["All US exchange listings", "SPY holdings (S&P 500)", "My watchlist"])
+    watchlist_text = "NVDA AMD TSLA PLTR SMCI AVGO MU ARM CRWD NET SNOW DDOG SHOP COIN HOOD SOFI AFRM UPST RBLX APP RKLB IONQ HIMS CELH ELF ONON DKNG ROKU TTD MELI SE NU MSTR MARA RIOT AXON CAVA ANF DECK UBER ABNB DASH ENPH FSLR RIVN CVNA OPEN SOUN RGTI U W LULU"
+    if universe_name == "My watchlist":
+        watchlist_text = st.text_area("Tickers (spaces or commas are okay)", value=watchlist_text, height=110)
     limit = st.select_slider("Symbols to scan", options=[100, 250, 500, 1000, 2500, 5000, 10000], value=10000)
     if st.button("Refresh universe and prices", type="primary", use_container_width=True):
         get_universe.clear(); get_prices.clear()
@@ -100,8 +136,9 @@ with st.sidebar:
 
 try:
     with st.spinner("Loading listed-stock universe…"):
-        universe = get_universe()
-    st.caption(f"Universe source: official Nasdaq Trader symbol directories (Nasdaq and other US listings) · {len(universe):,} eligible symbols received. Scanning up to {limit:,}; price data coverage depends on Yahoo Finance availability.")
+        universe = get_universe(universe_name, watchlist_text)
+    source_note = "Nasdaq and other US exchanges" if universe_name == "All US exchange listings" else "State Street SPY fund holdings" if universe_name == "SPY holdings (S&P 500)" else "your typed tickers"
+    st.caption(f"Universe: {universe_name} · Source: {source_note} · {len(universe):,} symbols received. Scanning up to {limit:,}; price history availability depends on Yahoo Finance.")
     symbols = universe[:limit]
     with st.spinner(f"Downloading daily history for {len(symbols):,} symbols…"):
         price_map = get_prices(symbols)
@@ -125,7 +162,7 @@ try:
 except Exception as exc:
     universe = []; results = pd.DataFrame()
     st.error(f"Market data could not be loaded: {exc}")
-    st.info("The dashboard needs an internet connection and currently uses Nasdaq Trader's public symbol directory and Yahoo Finance.")
+    st.info("The dashboard needs an internet connection. It uses Nasdaq Trader listings, State Street SPY holdings, and Yahoo Finance prices.")
 
 if not results.empty:
     a, b, c = st.columns(3)
@@ -133,7 +170,7 @@ if not results.empty:
     b.metric("Price/volume-qualified", f"{len(results):,}")
     c.metric("Passing breakout + volume", f"{((results['Breakout'] == 'Yes') & (results['Volume confirms'] == 'Yes')).sum():,}")
 
-tab1, tab2, tab3 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia"])
+tab1, tab2, tab3, tab4 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia", "4 · Stock lookup"])
 with tab1:
     st.subheader("Trader breakout rules")
     st.caption("A transparent approximation of the rules described in your pasted notes: trend, recent range breakout, momentum, and volume. It is not a reconstruction of a named trader's full system.")
@@ -151,6 +188,49 @@ with tab3:
     st.subheader("Birbia")
     st.warning("Strategy rules are not specified yet, so this tab is reserved and does not generate signals.")
     st.write("Send the exact name, a link, or the entry/exit rules you mean by “Birbia” and I can implement a transparent version.")
+with tab4:
+    st.subheader("Look up one stock")
+    st.caption("Enter any ticker, such as NVDA, U, or BRK.B. We’ll show available daily price history and calculate the same transparent technical checks.")
+    with st.form("ticker_lookup_form"):
+        lookup_input = st.text_input("Stock ticker", placeholder="e.g. NVDA")
+        lookup_period = st.selectbox("Chart period", ["6mo", "1y", "2y", "5y"], index=1)
+        lookup_submit = st.form_submit_button("Show stock details", type="primary")
+    if lookup_submit:
+        lookup_symbol = lookup_input.strip().upper().replace(".", "-")
+        if not lookup_symbol:
+            st.warning("Type a ticker first.")
+        else:
+            try:
+                with st.spinner(f"Loading {lookup_symbol}…"):
+                    lookup_data = get_prices((lookup_symbol,), period=lookup_period).get(lookup_symbol)
+                if lookup_data is None or lookup_data.empty:
+                    st.error(f"No price history was found for {lookup_symbol}. Check the ticker spelling or try again later.")
+                else:
+                    lookup_data = lookup_data.dropna(subset=["Close"])
+                    detail = score_frame(lookup_symbol, lookup_data)
+                    last_price = float(lookup_data["Close"].iloc[-1])
+                    prior_close = float(lookup_data["Close"].iloc[-2]) if len(lookup_data) > 1 else last_price
+                    one_year_return = (last_price / float(lookup_data["Close"].iloc[0]) - 1) * 100
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("Latest close", f"${last_price:,.2f}", f"{(last_price / prior_close - 1) * 100:+.2f}% day")
+                    m2.metric(f"Return over {lookup_period}", f"{one_year_return:+.1f}%")
+                    if detail:
+                        m3.metric("Trader checks", detail["Trader score"])
+                        l1, l2, l3 = st.columns(3)
+                        l1.metric("20-day momentum", f"{detail['20d momentum %']:+.1f}%")
+                        l2.metric("Breakout trigger", f"${detail['Trigger']:,.2f}")
+                        l3.metric("Reference stop", f"${detail['Reference stop']:,.2f}")
+                        risk_dollars = capital * risk_pct / 100
+                        risk_per_share = max(last_price - detail["Reference stop"], 0.01)
+                        shares = int(risk_dollars / risk_per_share)
+                        st.write(f"At your selected risk setting: about **{shares} shares** for a maximum planned risk of **${risk_dollars:,.2f}** (before gaps or slippage).")
+                        st.dataframe(pd.DataFrame([detail]), hide_index=True, use_container_width=True)
+                    else:
+                        st.info("This ticker has price data, but fewer than 60 trading days are available for the technical checks.")
+                    st.line_chart(lookup_data["Close"].rename("Adjusted close"), height=360)
+                    st.caption("Price data and calculated indicators are provided for research only; they are not a recommendation to buy or sell.")
+            except Exception as exc:
+                st.error(f"Could not load {lookup_symbol}: {exc}")
 
 with st.expander("How sizing and the goal tracker work"):
     st.write(f"Risk budget per trade is ${capital * risk_pct / 100:,.2f} at the selected {risk_pct:.2f}% account risk. Reference stops use the lower of the recent 10-day low or a 6% reference distance. Share counts are capped so the position value does not exceed the account balance. Actual fills, gaps, fees, and losses can differ substantially.")
