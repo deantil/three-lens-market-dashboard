@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "starting_cash": 100.0,
+  "target_balance": 1000.0,
+  "cash": 100.0,
+  "positions": [],
+  "pending": [],
+  "trades": [],
+  "equity_history": [],
+  "last_bar_date": null,
+  "benchmark_shares": null,
+  "last_run_utc": null
+}
+
