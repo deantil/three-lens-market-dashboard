@@ -22,21 +22,31 @@ st.caption("A research and risk-planning tool. Signals are educational, delayed 
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def get_universe():
-    """Fetch current listed equity symbols from Nasdaq's public screener endpoint."""
-    url = "https://api.nasdaq.com/api/screener/stocks"
-    headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}
-    frames = []
-    for exchange in ("nasdaq", "nyse", "amex"):
-        response = requests.get(url, params={"tableonly": "true", "limit": "10000", "exchange": exchange}, headers=headers, timeout=30)
+    """Load Nasdaq Trader's official daily files for Nasdaq and other US listings."""
+    base = "https://www.nasdaqtrader.com/dynamic/SymDir/"
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; market-dashboard/1.0)"}
+    symbols = []
+    for filename in ("nasdaqlisted.txt", "otherlisted.txt"):
+        response = requests.get(base + filename, headers=headers, timeout=30)
         response.raise_for_status()
-        frames.append(pd.DataFrame(response.json().get("data", {}).get("rows", [])))
-    df = pd.concat(frames, ignore_index=True)
-    if df.empty or "symbol" not in df:
-        raise ValueError("The exchange screener returned no symbols.")
-    df["symbol"] = df["symbol"].astype(str).str.replace("$", "-", regex=False).str.replace(".", "-", regex=False)
-    if "name" in df:
-        df = df[~df["name"].str.contains(r"ETF|Fund|Warrant|Right|Unit|Preferred", case=False, na=False)]
-    return sorted(set(df["symbol"].dropna()) - {""})
+        table = pd.read_csv(StringIO(response.text), sep="|", dtype=str)
+        table.columns = [column.strip() for column in table.columns]
+        symbol_col = "Symbol" if "Symbol" in table.columns else "ACT Symbol"
+        table = table[table[symbol_col].notna()]
+        table = table[~table[symbol_col].str.startswith("File Creation Time", na=False)]
+        if "Test Issue" in table.columns:
+            table = table[table["Test Issue"].eq("N")]
+        if "ETF" in table.columns:
+            table = table[table["ETF"].ne("Y")]
+        name_col = "Security Name"
+        if name_col in table.columns:
+            table = table[~table[name_col].str.contains(r"Warrant|Right|Unit|Preferred", case=False, na=False)]
+        symbols.extend(table[symbol_col].tolist())
+    cleaned = [str(symbol).replace("$", "-").replace(".", "-").strip() for symbol in symbols]
+    cleaned = [symbol for symbol in cleaned if symbol and symbol.isascii()]
+    if not cleaned:
+        raise ValueError("Nasdaq Trader's symbol directory returned no symbols.")
+    return sorted(set(cleaned))
 
 @st.cache_data(ttl=900, show_spinner=False)
 def get_prices(symbols, period="1y"):
@@ -91,7 +101,7 @@ with st.sidebar:
 try:
     with st.spinner("Loading listed-stock universe…"):
         universe = get_universe()
-    st.caption(f"Universe source: Nasdaq stock screener (Nasdaq, NYSE, NYSE American) · {len(universe):,} listed symbols received. Scanning up to {limit:,}; price data coverage depends on Yahoo Finance availability.")
+    st.caption(f"Universe source: official Nasdaq Trader symbol directories (Nasdaq and other US listings) · {len(universe):,} eligible symbols received. Scanning up to {limit:,}; price data coverage depends on Yahoo Finance availability.")
     symbols = universe[:limit]
     with st.spinner(f"Downloading daily history for {len(symbols):,} symbols…"):
         price_map = get_prices(symbols)
@@ -115,7 +125,7 @@ try:
 except Exception as exc:
     universe = []; results = pd.DataFrame()
     st.error(f"Market data could not be loaded: {exc}")
-    st.info("The dashboard needs an internet connection and currently uses public Nasdaq screener and Yahoo Finance endpoints.")
+    st.info("The dashboard needs an internet connection and currently uses Nasdaq Trader's public symbol directory and Yahoo Finance.")
 
 if not results.empty:
     a, b, c = st.columns(3)
