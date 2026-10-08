@@ -54,7 +54,6 @@ def get_universe(universe_name, custom_text=""):
             raise ValueError("State Street's SPY holdings file returned no stock tickers.")
         return sorted(set(symbols))
 
-    """Load Nasdaq Trader's official daily files for Nasdaq and other US listings."""
     base = "https://www.nasdaqtrader.com/dynamic/SymDir/"
     headers = {"User-Agent": "Mozilla/5.0 (compatible; market-dashboard/1.0)"}
     symbols = []
@@ -169,21 +168,24 @@ if not results.empty:
     a.metric("Symbols with data", f"{len(price_map):,}")
     b.metric("Price/volume-qualified", f"{len(results):,}")
     c.metric("Passing breakout + volume", f"{((results['Breakout'] == 'Yes') & (results['Volume confirms'] == 'Yes')).sum():,}")
+    st.caption("Read the boxes left to right: symbols with data have price history; price/volume-qualified pass your sidebar filters; passing breakout + volume also need a 20-day-high breakout and today's volume at least 1.5× its recent average. A zero means none meet both checks today.")
 
 tab1, tab2, tab3, tab4 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia", "4 · Stock lookup"])
 with tab1:
     st.subheader("Trader breakout rules")
     st.caption("A transparent approximation of the rules described in your pasted notes: trend, recent range breakout, momentum, and volume. It is not a reconstruction of a named trader's full system.")
+    st.caption("Numbers: Day % and 20d momentum % are price changes; Rel. volume 1.00× means volume equal to its recent average; ADR % is average daily price range. Scroll the table sideways to see every column.")
     if not results.empty:
         show = results[results["Trader score"].str[0].astype(int) >= 3].sort_values(["Breakout", "Trader score"], ascending=False)
-        st.dataframe(show, hide_index=True, use_container_width=True, column_config={"Price": st.column_config.NumberColumn(format="$%.2f"), "Trigger": st.column_config.NumberColumn(format="$%.2f"), "Reference stop": st.column_config.NumberColumn(format="$%.2f"), "Estimated position $": st.column_config.NumberColumn(format="$%.2f")})
+        columns = {"Price": st.column_config.NumberColumn(format="$%.2f"), "Day %": st.column_config.NumberColumn(format="%.2f%%"), "20d momentum %": st.column_config.NumberColumn(format="%.2f%%"), "Rel. volume": st.column_config.NumberColumn(format="%.2fx"), "ADR %": st.column_config.NumberColumn(format="%.2f%%"), "Trigger": st.column_config.NumberColumn(format="$%.2f"), "Reference stop": st.column_config.NumberColumn(format="$%.2f"), "Estimated position $": st.column_config.NumberColumn(format="$%.2f")}
+        st.dataframe(show, hide_index=True, use_container_width=True, column_config=columns)
         st.download_button("Download full scan CSV", results.to_csv(index=False), "market_scan.csv", "text/csv")
 with tab2:
     st.subheader("Nirvana OmniTrader · public Power Move approximation")
     st.caption("Nirvana publicly describes Power Move as a breakout approach where price, momentum, and volume agree. The proprietary signal logic and licensed indicators are not reproduced here.")
     if not results.empty:
         omni = results[results["Omni score"].str[0].astype(int) >= 3].sort_values(["Omni score", "Rel. volume"], ascending=False)
-        st.dataframe(omni, hide_index=True, use_container_width=True)
+        st.dataframe(omni, hide_index=True, use_container_width=True, column_config=columns)
 with tab3:
     st.subheader("Birbia")
     st.warning("Strategy rules are not specified yet, so this tab is reserved and does not generate signals.")
