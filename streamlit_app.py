@@ -107,6 +107,13 @@ def get_prices(symbols, period="1y"):
     return out
 
 @st.cache_data(ttl=300, show_spinner=False)
+def get_paper_state():
+    url = "https://raw.githubusercontent.com/deantil/three-lens-market-dashboard/paper-state/paper_challenge_state.json"
+    response = requests.get(url, timeout=15)
+    response.raise_for_status()
+    return response.json()
+
+@st.cache_data(ttl=300, show_spinner=False)
 def get_option_expirations(symbol):
     return list(yf.Ticker(symbol).options)
 
@@ -432,148 +439,48 @@ with tab5:
         st.markdown("Learn more: [Cash-secured puts](https://www.optionseducation.org/strategies/all-strategies/cash-secured-put) · [Covered calls](https://www.optionseducation.org/strategies/all-strategies/covered-call-buy-write) · [Options probability calculator](https://www.optionseducation.org/Options-Quotes-Calculators) · [OCC options risk disclosure](https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document)")
 
 with tab6:
-    st.subheader("$100 to $1,000 · paper-trading challenge")
-    st.warning("Simulation only. This tab cannot place real orders. It uses delayed daily Yahoo Finance prices and a transparent breakout rule; it cannot promise or guarantee a 10× return.")
-    st.caption("The paper strategy looks for a 20-day breakout with confirming volume and a Trader score of at least 4/5. It records a signal first, then paper-fills it at the next new daily close. It holds up to three fractional-share positions and exits if a daily close falls below its trailing reference stop. This is a simple experiment, not a validated profitable strategy.")
-
-    blank_paper_state = {
-        "starting_cash": 100.0,
-        "cash": 100.0,
-        "positions": [],
-        "pending": [],
-        "trades": [],
-        "last_bar_date": None,
-    }
-    if "paper_challenge_state" not in st.session_state:
-        st.session_state["paper_challenge_state"] = blank_paper_state.copy()
-
-    state = st.session_state["paper_challenge_state"]
-    saved_file = st.file_uploader("Load a saved challenge file (optional)", type=["json"], key="paper_state_upload")
-    import_col, reset_col = st.columns(2)
-    if import_col.button("Load saved challenge", key="paper_import"):
-        if saved_file is None:
-            st.info("Choose your saved JSON file first.")
+    st.subheader("$100 to $1,000 · free paper-trading challenge")
+    st.warning("Paper trading only. This agent cannot access a brokerage or place real orders. It cannot promise or guarantee a 10× return.")
+    st.caption("A free, rule-based GitHub Action scans SPY holdings after US market days. It looks for a 20-day breakout, confirming volume, and a Trader score of at least 4/5. Signals are filled at the next available daily close, with up to three fractional-share positions and a trailing reference stop. It compares the result with buying SPY. This is an experiment, not a validated strategy or an AI that rewrites trading rules.")
+    st.link_button("Open the paper-agent runs", "https://github.com/deantil/three-lens-market-dashboard/actions/workflows/paper-challenge.yml")
+    try:
+        agent_state = get_paper_state()
+        history = agent_state.get("equity_history", [])
+        if not history:
+            st.info("The free paper agent has not completed its first scan yet. Use the link above and choose **Run workflow** to start it, or wait for its next scheduled run.")
         else:
-            try:
-                imported_state = json.loads(saved_file.getvalue().decode("utf-8"))
-                required = {"starting_cash", "cash", "positions", "pending", "trades", "last_bar_date"}
-                if not isinstance(imported_state, dict) or not required.issubset(imported_state):
-                    raise ValueError("That file is missing challenge data.")
-                if not isinstance(imported_state["positions"], list) or not isinstance(imported_state["trades"], list):
-                    raise ValueError("The saved positions or trade log is not valid.")
-                st.session_state["paper_challenge_state"] = imported_state
-                st.success("Saved challenge loaded.")
-                st.rerun()
-            except Exception as exc:
-                st.error(f"Could not load that challenge file: {exc}")
-    if reset_col.button("Reset to $100", key="paper_reset"):
-        st.session_state["paper_challenge_state"] = blank_paper_state.copy()
-        st.rerun()
+            latest = history[-1]
+            equity = float(latest.get("equity", agent_state.get("cash", 100)))
+            target = float(agent_state.get("target_balance", 1000))
+            start = float(agent_state.get("starting_cash", 100))
+            progress = max(0.0, min(1.0, (equity - start) / max(target - start, 1)))
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Paper balance", f"${equity:,.2f}", f"{equity - start:+,.2f} vs. start")
+            m2.metric("Cash", f"${float(agent_state.get('cash', 0)):,.2f}")
+            m3.metric("SPY comparison", f"${float(latest.get('benchmark', start)):,.2f}")
+            st.progress(progress)
+            st.caption(f"Target: ${target:,.0f} · Latest daily bar: {agent_state.get('last_bar_date') or 'waiting'} · Last agent run (UTC): {agent_state.get('last_run_utc') or 'not run yet'} · State is public in this repository.")
 
-    state = st.session_state["paper_challenge_state"]
-    paper_candidates = paper_results.copy() if not paper_results.empty else pd.DataFrame()
-    if not paper_candidates.empty:
-        paper_candidates["Trader score number"] = paper_candidates["Trader score"].str.extract(r"(\d+)").astype(float)
-        paper_candidates = paper_candidates[
-            (paper_candidates["Breakout"] == "Yes")
-            & (paper_candidates["Volume confirms"] == "Yes")
-            & (paper_candidates["Trader score number"] >= 4)
-            & (paper_candidates["Average $ volume"] >= min_dollar_vol * 1_000_000)
-        ].sort_values(["Trader score number", "Rel. volume"], ascending=False)
+            if history:
+                history_frame = pd.DataFrame(history)
+                if {"date", "equity", "benchmark"}.issubset(history_frame.columns):
+                    st.line_chart(history_frame.set_index("date")[["equity", "benchmark"]], height=260)
+            if agent_state.get("positions"):
+                st.markdown("**Open paper positions**")
+                st.dataframe(pd.DataFrame(agent_state["positions"]), hide_index=True, use_container_width=True)
+            else:
+                st.info("No open paper positions. The agent waits when no stocks pass its rules.")
+            if agent_state.get("pending"):
+                st.markdown("**Signals waiting for the next daily close**")
+                st.dataframe(pd.DataFrame(agent_state["pending"]), hide_index=True, use_container_width=True)
+            if agent_state.get("trades"):
+                st.markdown("**Recent paper trades**")
+                st.dataframe(pd.DataFrame(agent_state["trades"][-20:]).iloc[::-1], hide_index=True, use_container_width=True)
+            st.download_button("Download paper challenge history", json.dumps(agent_state, indent=2), "paper_challenge_state.json", "application/json", key="agent_state_download")
+    except Exception as exc:
+        st.error(f"Could not load the latest paper-agent report: {exc}")
+    st.caption("This free agent runs once after the US stock market closes on weekdays; it is not a 24/7 quote feed or an AI software engineer. GitHub's scheduled runs can be delayed. Data can be stale or unavailable. Simulated fills ignore commissions, spread, taxes, and slippage; real stop orders can fill worse during price gaps.")
 
-    latest_bar_dates = [pd.Timestamp(frame.index[-1]).date() for frame in price_map.values() if frame is not None and not frame.empty]
-    latest_bar_date = max(latest_bar_dates).isoformat() if latest_bar_dates else None
-    live_prices = {
-        symbol: float(frame["Close"].dropna().iloc[-1])
-        for symbol, frame in price_map.items()
-        if frame is not None and not frame.empty and not frame["Close"].dropna().empty
-    }
-
-    if st.button("Run next daily paper step", type="primary", key="paper_run"):
-        if latest_bar_date is None:
-            st.error("No completed daily price bar is available. Refresh the stock scan and try again.")
-        elif state["last_bar_date"] == latest_bar_date:
-            st.info("No new daily bar since the last paper step. No simulated trades were made.")
-        elif state["last_bar_date"] is None:
-            state["last_bar_date"] = latest_bar_date
-            state["pending"] = paper_candidates["Symbol"].head(10).tolist() if not paper_candidates.empty else []
-            st.session_state["paper_challenge_state"] = state
-            st.success("First scan saved. Any qualifying signal will be paper-filled only after a newer daily bar appears.")
-            st.rerun()
-        else:
-            cash = float(state["cash"])
-            current_date = latest_bar_date
-            reference_stops = dict(zip(paper_results["Symbol"], paper_results["Reference stop"])) if not paper_results.empty else {}
-            kept_positions = []
-            for position in state["positions"]:
-                symbol = position["symbol"]
-                mark = live_prices.get(symbol, float(position["last_price"]))
-                trailing_stop = max(float(position["stop"]), float(reference_stops.get(symbol, position["stop"])))
-                if mark <= trailing_stop:
-                    cash += float(position["shares"]) * mark
-                    state["trades"].append({"date": current_date, "action": "SELL", "symbol": symbol, "shares": float(position["shares"]), "price": mark, "note": "Daily close at or below trailing reference stop"})
-                else:
-                    kept_positions.append({**position, "last_price": mark, "stop": trailing_stop})
-            state["positions"] = kept_positions
-
-            held = {position["symbol"] for position in state["positions"]}
-            pending_symbols = list(dict.fromkeys(state["pending"]))
-            position_budget = (cash + sum(float(p["shares"]) * float(p["last_price"]) for p in state["positions"])) / 3
-            for symbol in pending_symbols:
-                if len(state["positions"]) >= 3:
-                    break
-                if symbol in held or symbol not in live_prices or cash <= 0:
-                    continue
-                mark = live_prices[symbol]
-                allocation = min(cash, position_budget)
-                shares = allocation / mark if mark > 0 else 0
-                if shares <= 0:
-                    continue
-                stop = float(reference_stops.get(symbol, mark * 0.94))
-                state["positions"].append({"symbol": symbol, "shares": shares, "entry_price": mark, "last_price": mark, "stop": stop, "entry_date": current_date})
-                cash -= allocation
-                held.add(symbol)
-                state["trades"].append({"date": current_date, "action": "BUY", "symbol": symbol, "shares": shares, "price": mark, "note": "Paper fill at the next available daily close"})
-
-            state["cash"] = max(cash, 0.0)
-            state["pending"] = [symbol for symbol in (paper_candidates["Symbol"].head(10).tolist() if not paper_candidates.empty else []) if symbol not in held]
-            state["last_bar_date"] = current_date
-            st.session_state["paper_challenge_state"] = state
-            st.success("Paper portfolio updated from the latest completed daily bar.")
-            st.rerun()
-
-    positions = state["positions"]
-    portfolio_value = sum(float(position["shares"]) * live_prices.get(position["symbol"], float(position["last_price"])) for position in positions)
-    equity = float(state["cash"]) + portfolio_value
-    target_progress = max(0.0, min(1.0, (equity - 100.0) / 900.0))
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Paper account", f"${equity:,.2f}", f"{equity - 100.0:+,.2f} vs. start")
-    m2.metric("Cash available", f"${float(state['cash']):,.2f}")
-    m3.metric("Target", "$1,000", f"{target_progress * 100:.1f}% of the $900 gain needed")
-    st.progress(target_progress)
-    st.caption(f"Last processed daily bar: {state['last_bar_date'] or 'not started'} · Pending paper signals: {len(state['pending'])} · Current scan candidates: {len(paper_candidates)}")
-
-    if positions:
-        position_rows = []
-        for position in positions:
-            mark = live_prices.get(position["symbol"], float(position["last_price"]))
-            shares = float(position["shares"])
-            position_rows.append({"Symbol": position["symbol"], "Shares (fractional)": shares, "Entry $": float(position["entry_price"]), "Latest close $": mark, "Reference stop $": float(position["stop"]), "Unrealized P/L $": (mark - float(position["entry_price"])) * shares})
-        st.dataframe(pd.DataFrame(position_rows), hide_index=True, use_container_width=True)
-    else:
-        st.info("No open paper positions yet. The first run records signals; a later daily bar is needed before the simulator can fill them.")
-
-    if not paper_candidates.empty:
-        st.markdown("**Current rule-based paper candidates**")
-        st.dataframe(paper_candidates[["Symbol", "Price", "Trader score", "20d momentum %", "Rel. volume", "Reference stop"]].head(10), hide_index=True, use_container_width=True)
-    else:
-        st.info("No stocks currently pass all paper-strategy filters. The simulator will wait; it will not force a trade.")
-
-    if state["trades"]:
-        st.markdown("**Paper trade history**")
-        st.dataframe(pd.DataFrame(state["trades"]).sort_values("date", ascending=False), hide_index=True, use_container_width=True)
-    st.download_button("Save challenge state to JSON", json.dumps(state, indent=2), "paper_challenge_state.json", "application/json", key="paper_download")
-    st.caption("Streamlit Community Cloud does not provide durable private portfolio storage for this prototype. Download the JSON after updates and load it next time to continue. The simulation ignores commissions, spread, taxes, and slippage, and real stop orders can fill worse during gaps.")
 
 with st.expander("How sizing and the goal tracker work"):
     st.write(f"Risk budget per trade is ${capital * risk_pct / 100:,.2f} at the selected {risk_pct:.2f}% account risk. Reference stops use the lower of the recent 10-day low or a 6% reference distance. Share counts are capped so the position value does not exceed the account balance. Actual fills, gaps, fees, and losses can differ substantially.")
