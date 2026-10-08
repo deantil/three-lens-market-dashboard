@@ -1,28 +1,27 @@
 # Three Lens Market Dashboard
 
-This repository powers [your Streamlit dashboard](https://three-lens-market-dashboard.streamlit.app/). It is separate from the older Breakout Dashboard.
+This repository powers the [Three Lens Market Dashboard](https://three-lens-market-dashboard.streamlit.app/). It is separate from the older Breakout Dashboard.
 
-## What it does today
+## What it does
 
-- Scans US-listed stocks using the Nasdaq Trader listing files, SPY holdings, or your own watchlist.
-- Uses daily price history from Yahoo Finance for breakout, momentum, trend, and volume screens.
-- Looks up one stock by ticker.
-- Includes an options-income shortlist for cash-secured puts and covered calls, based on a limited set of liquid stocks that pass the stock screen.
+- Scans US-listed stocks using the Nasdaq Trader listings, SPY holdings, or a personal watchlist.
+- Shows daily trend, breakout, momentum, and volume checks, plus a one-ticker lookup.
+- Includes an educational options-income shortlist for selected cash-secured puts and covered calls.
+- Includes a **$100 to $1,000 paper-trading challenge**. It uses the breakout and volume rules, waits for a newer daily bar before simulating fills, holds up to three fractional-share positions, and tracks a stop-based exit rule.
 
-The app is for research and paper planning. It does not connect to a brokerage or place trades. Yahoo Finance data can be delayed, incomplete, unavailable, or rate-limited. The options probability is a simplified estimate, not a measured win rate or promise.
+The app is for research and paper trading only. It cannot connect to a brokerage or place real orders. Price and options data from Yahoo Finance can be delayed, incomplete, unavailable, or rate-limited. The paper challenge is a simple rule-based experiment, not an AI that learns, a validated profitable strategy, or a promise to turn $100 into $1,000.
 
-## Deployment
+## Deployment and free-host limits
 
-Streamlit Community Cloud is connected to this repository. Changes pushed to the `main` branch trigger a new build of the app. The main file is `streamlit_app.py`.
+Streamlit Community Cloud is connected to this repository. Updates pushed to `main` trigger a rebuild. The main app file is `streamlit_app.py`.
 
-## Current operating limits
+Community Cloud may hibernate the app after 12 hours without traffic. Paper-trading state is kept in the current browser session; download the JSON save file after updates and load it next time to continue.
 
-The current scanner is for US-listed stocks and daily price bars. It can be opened at any time, but it does not provide guaranteed real-time quotes or run stock-market trades around the clock. Streamlit Community Cloud may hibernate an app after 12 hours without traffic.
-
-A future 24/7 asset class such as crypto needs its own market-data provider, symbol list, trading calendar, and data-freshness checks. The current stock and option rules should not be copied over as if they were validated for that asset class.
+The scanner is currently for US-listed stocks and daily price bars. To support a 24/7 asset class later, add a separate data provider, symbol list, trading calendar, and data-freshness checks. This app does not promise always-on uptime or real-time quotes.
 
 ## Risk notes
 
-A standard equity option contract generally represents 100 shares. A cash-secured put may require enough cash to buy 100 shares; a covered call requires owning 100 shares. Option writing can lose substantially more than the premium received. Review the [OCC options disclosure](https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document) before considering options.
+A standard equity option contract generally represents 100 shares. A cash-secured put may require enough cash to buy 100 shares; a covered call requires owning 100 shares. Option writers can lose substantially more than the premium received. Review the [OCC options disclosure](https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document).
 
-The $1,000-to-$10,000 goal tracker shows arithmetic only. It is not a forecast or a promise of returns.
+The $1,000 target is a challenge goal for paper tracking, not a forecast. Past or simulated results do not guarantee future outcomes.
+
