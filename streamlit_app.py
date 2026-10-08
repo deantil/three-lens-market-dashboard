@@ -269,7 +269,15 @@ with tab1:
     st.caption("Numbers: Day % and 20d momentum % are price changes; Rel. volume 1.00× means volume equal to its recent average; ADR % is average daily price range. Scroll the table sideways to see every column.")
     if not results.empty:
         show = results[results["Trader score"].str[0].astype(int) >= 3].sort_values(["Breakout", "Trader score"], ascending=False)
-        columns = {"Price": st.column_config.NumberColumn(format="$%.2f"), "Day %": st.column_config.NumberColumn(format="%.2f%%"), "20d momentum %": st.column_config.NumberColumn(format="%.2f%%"), "Rel. volume": st.column_config.NumberColumn(format="%.2fx"), "ADR %": st.column_config.NumberColumn(format="%.2f%%"), "Trigger": st.column_config.NumberColumn(format="$%.2f"), "Reference stop": st.column_config.NumberColumn(format="$%.2f"), "Estimated position $": st.column_config.NumberColumn(format="$%.2f")}
+        columns = {"Price": st.column_config.NumberColumn(format="$%.2f"), "Day %": st.column_config.NumberColumn(format="%.2f%%"), "20d momentum %": st.column_config.NumberColumn(format="%.2fx"), "Rel. volume": st.column_config.NumberColumn(format="%.2fx"), "ADR %": st.column_config.NumberColumn(format="%.2f%%"), "Trigger": st.column_config.NumberColumn(format="$%.2f"), "Reference stop": st.column_config.NumberColumn(format="$%.2f"), "Estimated position $": st.column_config.NumberColumn(format="$%.2f")}
+        passed = results[(results["Breakout"] == "Yes") & (results["Volume confirms"] == "Yes")].sort_values(["Trader score", "Rel. volume"], ascending=False)
+        st.markdown("**Stocks that passed both checks today**")
+        st.caption("These symbols passed the 20-day breakout and volume checks, plus your sidebar filters. They are research candidates, not buy instructions.")
+        if passed.empty:
+            st.info("No stocks passed both breakout and volume checks today.")
+        else:
+            quick_columns = ["Symbol", "Price", "Day %", "Trader score", "Rel. volume", "Trigger", "Reference stop"]
+            st.dataframe(passed[quick_columns], hide_index=True, use_container_width=True, column_config=columns)
         st.dataframe(show, hide_index=True, use_container_width=True, column_config=columns)
         st.download_button("Download full scan CSV", results.to_csv(index=False), "market_scan.csv", "text/csv")
 with tab2:
