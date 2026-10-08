@@ -1,0 +1,65 @@
+name: Daily US paper challenge
+
+on:
+  schedule:
+    - cron: "31 21 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-paper-challenge
+  cancel-in-progress: false
+
+jobs:
+  update-paper-account:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out the app
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install free market-data libraries
+        run: python -m pip install --disable-pip-version-check pandas yfinance requests openpyxl
+
+      - name: Restore the paper account
+        shell: bash
+        run: |
+          if git fetch origin paper-state; then
+            if git show FETCH_HEAD:paper_challenge_state.json > paper_challenge_state.json 2>/dev/null; then
+              echo "Restored paper account from paper-state branch."
+            else
+              cp outputs/paper_challenge_state.json paper_challenge_state.json
+            fi
+          else
+            cp outputs/paper_challenge_state.json paper_challenge_state.json
+          fi
+
+      - name: Run one daily paper step
+        run: python paper_agent.py paper_challenge_state.json
+
+      - name: Publish updated paper state
+        shell: bash
+        run: |
+          cp paper_challenge_state.json "$RUNNER_TEMP/paper_challenge_state.json"
+          git fetch origin paper-state
+          git checkout -B paper-state FETCH_HEAD
+          cp "$RUNNER_TEMP/paper_challenge_state.json" paper_challenge_state.json
+          git add paper_challenge_state.json
+          if git diff --cached --quiet; then
+            echo "No new daily bar; paper state did not change."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update daily paper challenge"
+          git push origin paper-state
+
