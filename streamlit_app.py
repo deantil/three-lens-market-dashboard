@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from io import BytesIO, StringIO
+import math
 import requests
 import pandas as pd
 import streamlit as st
@@ -86,12 +87,98 @@ def get_prices(symbols, period="1y"):
     if data.empty: return out
     if isinstance(data.columns, pd.MultiIndex):
         for symbol in symbols:
-            if symbol in data.columns.get_level_values(0):
-                frame = data[symbol].dropna(how="all")
+            frame = None
+            # yfinance may put the ticker on either MultiIndex level, especially
+            # when only one symbol is requested from the Stock Lookup tab.
+            for level in range(data.columns.nlevels):
+                if symbol in data.columns.get_level_values(level):
+                    frame = data.xs(symbol, axis=1, level=level, drop_level=True)
+                    if isinstance(frame.columns, pd.MultiIndex):
+                        frame.columns = frame.columns.get_level_values(-1)
+                    break
+            if frame is not None and set(("Open", "High", "Low", "Close", "Volume")).issubset(frame.columns):
+                frame = frame.dropna(how="all")
                 if not frame.empty: out[symbol] = frame
     else:
-        out[symbols[0]] = data.dropna(how="all")
+        frame = data.dropna(how="all")
+        if set(("Open", "High", "Low", "Close", "Volume")).issubset(frame.columns):
+            out[symbols[0]] = frame
     return out
+
+@st.cache_data(ttl=300, show_spinner=False)
+def get_option_expirations(symbol):
+    return list(yf.Ticker(symbol).options)
+
+@st.cache_data(ttl=300, show_spinner=False)
+def get_option_chain(symbol, expiration):
+    chain = yf.Ticker(symbol).option_chain(expiration)
+    return chain.calls, chain.puts
+
+def normal_cdf(x):
+    return 0.5 * (1 + math.erf(x / math.sqrt(2)))
+
+def as_number(value, default=0.0):
+    try:
+        number = float(value)
+        return number if math.isfinite(number) else default
+    except (TypeError, ValueError):
+        return default
+
+def option_candidates(chain, option_type, spot, expiration, account_size, min_open_interest, max_spread_pct):
+    exp_date = pd.Timestamp(expiration).date()
+    dte = max((exp_date - date.today()).days, 1)
+    t = dte / 365
+    rows = []
+    for _, option in chain.iterrows():
+        strike = as_number(option.get("strike"))
+        bid = as_number(option.get("bid"))
+        ask = as_number(option.get("ask"))
+        iv = as_number(option.get("impliedVolatility"))
+        volume = int(as_number(option.get("volume")))
+        oi = int(as_number(option.get("openInterest")))
+        if strike <= 0 or bid <= 0 or ask < bid or iv <= 0 or oi < min_open_interest:
+            continue
+        mid = (bid + ask) / 2
+        spread_pct = (ask - bid) / mid * 100 if mid else 999
+        if spread_pct > max_spread_pct:
+            continue
+        if option_type == "Cash-secured put" and strike >= spot:
+            continue
+        if option_type == "Covered call" and strike <= spot:
+            continue
+        if option_type == "Cash-secured put":
+            breakeven = strike - mid
+            collateral = strike * 100
+            max_profit = mid * 100
+            max_loss = max(breakeven, 0) * 100
+            # Lognormal expiration-price model: zero drift/rates and constant IV.
+            if breakeven <= 0:
+                pop = 100.0
+            else:
+                d2 = (math.log(spot / breakeven) - 0.5 * iv * iv * t) / (iv * math.sqrt(t))
+                pop = normal_cdf(d2) * 100
+        else:
+            breakeven = spot - mid
+            collateral = spot * 100
+            max_profit = max(0, strike - spot + mid) * 100
+            max_loss = max(breakeven, 0) * 100
+            if strike - spot + mid <= 0:
+                pop = 0.0
+            else:
+                d2 = (math.log(spot / breakeven) - 0.5 * iv * iv * t) / (iv * math.sqrt(t)) if breakeven > 0 else float("inf")
+                pop = normal_cdf(d2) * 100
+        rows.append({
+            "Expiration": expiration, "DTE": dte, "Type": option_type, "Strike $": strike,
+            "Bid $": bid, "Ask $": ask, "Mid premium $/share": mid,
+            "Premium / contract $": mid * 100, "Break-even $": breakeven,
+            "Cash / shares needed $": collateral, "Fits account": "Yes" if collateral <= account_size else "No",
+            "Max gain $": max_profit, "Max loss $": max_loss,
+            "Reward / max loss": max_profit / max_loss if max_loss else float("inf"),
+            "Est. profit probability %": pop, "Annualized premium / collateral %": mid * 100 / collateral * 365 / dte * 100,
+            "OTM distance %": abs(strike / spot - 1) * 100, "IV %": iv * 100,
+            "Bid-ask spread %": spread_pct, "Open interest": oi, "Volume": volume,
+        })
+    return pd.DataFrame(rows)
 
 def score_frame(symbol, df):
     close, high, low, volume = (df[k].dropna() for k in ("Close", "High", "Low", "Volume"))
@@ -110,7 +197,8 @@ def score_frame(symbol, df):
     trader = sum([trend_ok, breakout, volume_ok, momentum > 0, (pd.isna(ma200) or c > ma200)])
     omni = sum([breakout, volume_ok, momentum > 3, c > ma50])
     stop = min(float(low.iloc[-10:].min()), float(c * .94))
-    return {"Symbol": symbol, "Price": float(c), "Day %": float((c / prev - 1) * 100), "Trader score": f"{trader}/5", "Omni score": f"{omni}/4", "20d momentum %": float(momentum), "Rel. volume": float(relvol), "ADR %": float(adr), "Trigger": float(prior_high), "Reference stop": stop, "Above 21/50d": "Yes" if trend_ok else "No", "Breakout": "Yes" if breakout else "No", "Volume confirms": "Yes" if volume_ok else "No"}
+    avg_dollar_volume = float((close.tail(20) * volume.tail(20)).mean())
+    return {"Symbol": symbol, "Price": float(c), "Average $ volume": avg_dollar_volume, "Day %": float((c / prev - 1) * 100), "Trader score": f"{trader}/5", "Omni score": f"{omni}/4", "20d momentum %": float(momentum), "Rel. volume": float(relvol), "ADR %": float(adr), "Trigger": float(prior_high), "Reference stop": stop, "Above 21/50d": "Yes" if trend_ok else "No", "Breakout": "Yes" if breakout else "No", "Volume confirms": "Yes" if volume_ok else "No"}
 
 with st.sidebar:
     st.header("Scan settings")
@@ -150,12 +238,7 @@ try:
         results["Risk-sized shares"] = ((risk_usd / (results["Price"] - results["Reference stop"]).clip(lower=.01))).astype(int)
         results["Estimated position $"] = results["Risk-sized shares"] * results["Price"]
         results = results[(results["Estimated position $"] <= capital) & (results["Risk-sized shares"] > 0)]
-        liquid = []
-        for _, row in results.iterrows():
-            frame = price_map.get(row["Symbol"])
-            dv = (frame["Close"] * frame["Volume"]).tail(20).mean() / 1_000_000 if frame is not None else 0
-            if dv >= min_dollar_vol: liquid.append(row["Symbol"])
-        results = results[results["Symbol"].isin(liquid)].copy()
+        results = results[results["Average $ volume"] >= min_dollar_vol * 1_000_000].copy()
     else:
         st.warning("No daily price histories were returned. Try refreshing, or use a smaller symbol limit.")
 except Exception as exc:
@@ -170,7 +253,7 @@ if not results.empty:
     c.metric("Passing breakout + volume", f"{((results['Breakout'] == 'Yes') & (results['Volume confirms'] == 'Yes')).sum():,}")
     st.caption("Read the boxes left to right: symbols with data have price history; price/volume-qualified pass your sidebar filters; passing breakout + volume also need a 20-day-high breakout and today's volume at least 1.5× its recent average. A zero means none meet both checks today.")
 
-tab1, tab2, tab3, tab4 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia", "4 · Stock lookup"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia inspired", "4 · Stock lookup", "5 · Options income scan"])
 with tab1:
     st.subheader("Trader breakout rules")
     st.caption("A transparent approximation of the rules described in your pasted notes: trend, recent range breakout, momentum, and volume. It is not a reconstruction of a named trader's full system.")
@@ -187,9 +270,29 @@ with tab2:
         omni = results[results["Omni score"].str[0].astype(int) >= 3].sort_values(["Omni score", "Rel. volume"], ascending=False)
         st.dataframe(omni, hide_index=True, use_container_width=True, column_config=columns)
 with tab3:
-    st.subheader("Birbia")
-    st.warning("Strategy rules are not specified yet, so this tab is reserved and does not generate signals.")
-    st.write("Send the exact name, a link, or the entry/exit rules you mean by “Birbia” and I can implement a transparent version.")
+    st.subheader("Birbia-inspired research")
+    st.caption("Birbia's public page describes AI stock analysis, short- and long-term trade ideas, options-income strategies, and a trade journal. Its exact private scoring rules are not public. This tab uses the dashboard's visible price/volume checks; it is not Birbia's AI or trade advice.")
+    if not results.empty:
+        long_term = results[(results["Above 21/50d"] == "Yes") & (results["20d momentum %"] > 0)].sort_values(["20d momentum %", "Trader score"], ascending=False)
+        short_term = results[(results["Breakout"] == "Yes") & (results["Volume confirms"] == "Yes")].sort_values("Rel. volume", ascending=False)
+        long_col, short_col = st.columns(2)
+        with long_col:
+            st.markdown("**Longer-term trend examples**")
+            st.caption("Above the 21- and 50-day averages, with positive 20-day momentum.")
+            st.dataframe(long_term.head(15), hide_index=True, use_container_width=True, column_config=columns)
+        with short_col:
+            st.markdown("**Short-term breakout examples**")
+            st.caption("Above the previous 20-day high, with volume at least 1.5× its recent average.")
+            st.dataframe(short_term.head(15), hide_index=True, use_container_width=True, column_config=columns)
+    else:
+        st.info("The stock scan did not return rows. Check the market-data message above or choose a smaller universe.")
+    with st.expander("Options-income strategies Birbia mentions"):
+        st.write("A cash-secured put means setting aside enough cash to buy 100 shares if assigned. A covered call means owning 100 shares before selling a call. These strategies can lose money, and the dashboard does not fetch or evaluate option-chain prices, so it does not suggest specific contracts.")
+    with st.expander("Simple trade journal"):
+        journal_seed = pd.DataFrame([{"Ticker": "", "Date": "", "Plan / strategy": "", "Entry $": None, "Exit $": None, "Shares": None, "Notes": ""}])
+        journal = st.data_editor(journal_seed, num_rows="dynamic", hide_index=True, use_container_width=True, key="birbia_journal")
+        st.download_button("Download journal CSV", journal.to_csv(index=False), "trade_journal.csv", "text/csv", key="download_birbia_journal")
+        st.caption("Download your journal to keep a copy. Entries stay in this browser session and are not saved to a permanent database.")
 with tab4:
     st.subheader("Look up one stock")
     st.caption("Enter any ticker, such as NVDA, U, or BRK.B. We’ll show available daily price history and calculate the same transparent technical checks.")
@@ -234,6 +337,99 @@ with tab4:
             except Exception as exc:
                 st.error(f"Could not load {lookup_symbol}: {exc}")
 
+with tab5:
+    st.subheader("Options income scan")
+    st.caption("Automatically screen the stocks already checked by the dashboard, then compare liquid cash-secured puts and covered calls. The scan prioritizes contracts that fit your account and ranks them by modeled profit probability, then premium yield. A standard equity option contract represents 100 shares.")
+    st.warning("Option selling can lose substantially more than the premium collected. A cash-secured put can require buying 100 shares; a covered call requires owning 100 shares. This tool is educational and does not place trades.")
+    with st.form("options_scan_form"):
+        scan_strategies = st.selectbox("Strategies to compare", ["Both", "Cash-secured puts", "Covered calls"])
+        dte_range = st.slider("Days until expiration", min_value=7, max_value=90, value=(14, 45))
+        underlyings_to_scan = st.select_slider("Liquid stocks to inspect", options=[10, 20, 30, 50], value=20)
+        minimum_oi = st.number_input("Minimum open interest per contract", min_value=0, value=100, step=50)
+        maximum_spread = st.slider("Maximum bid/ask spread (%)", min_value=5, max_value=50, value=20, step=5)
+        run_options_scan = st.form_submit_button("Find options income candidates", type="primary")
+    if run_options_scan:
+        if results.empty:
+            st.session_state["option_scan_rows"] = pd.DataFrame()
+            st.session_state["option_scan_note"] = "No screened stocks are available. Wait for the stock scan to finish or lower its price/volume requirements."
+        else:
+            # Pre-screen the stock universe before requesting option chains. Underlyings
+            # are sorted by recent dollar volume and roughly constrained by 100-share
+            # collateral, which avoids attempting thousands of unsupported bulk calls.
+            max_spot = capital / 100 * (1.5 if scan_strategies != "Covered calls" else 1.0)
+            underlyings = results[(results["Price"] <= max_spot) & (results["Average $ volume"] >= min_dollar_vol * 1_000_000)]
+            underlyings = underlyings.sort_values("Average $ volume", ascending=False).head(underlyings_to_scan)
+            candidate_frames = []
+            checked, failures = 0, 0
+            progress = st.progress(0, text="Finding eligible option chains…")
+            for i, (_, stock) in enumerate(underlyings.iterrows(), start=1):
+                symbol = stock["Symbol"]
+                try:
+                    expirations = get_option_expirations(symbol)
+                    eligible_expirations = []
+                    for expiry in expirations:
+                        days = (pd.Timestamp(expiry).date() - date.today()).days
+                        if dte_range[0] <= days <= dte_range[1]:
+                            eligible_expirations.append((expiry, days))
+                    center = sum(dte_range) / 2
+                    eligible_expirations = sorted(eligible_expirations, key=lambda item: abs(item[1] - center))[:2]
+                    for expiry, _ in eligible_expirations:
+                        calls, puts = get_option_chain(symbol, expiry)
+                        if scan_strategies in ("Both", "Cash-secured puts"):
+                            frame = option_candidates(puts, "Cash-secured put", float(stock["Price"]), expiry, capital, minimum_oi, maximum_spread)
+                            if not frame.empty:
+                                frame.insert(0, "Symbol", symbol); frame.insert(1, "Stock price $", float(stock["Price"]))
+                                candidate_frames.append(frame)
+                        if scan_strategies in ("Both", "Covered calls"):
+                            frame = option_candidates(calls, "Covered call", float(stock["Price"]), expiry, capital, minimum_oi, maximum_spread)
+                            if not frame.empty:
+                                frame.insert(0, "Symbol", symbol); frame.insert(1, "Stock price $", float(stock["Price"]))
+                                candidate_frames.append(frame)
+                    checked += 1
+                except Exception:
+                    failures += 1
+                progress.progress(i / max(len(underlyings), 1), text=f"Checking option chains: {i} of {len(underlyings)} stocks")
+            progress.empty()
+            option_rows = pd.concat(candidate_frames, ignore_index=True) if candidate_frames else pd.DataFrame()
+            if not option_rows.empty:
+                option_rows = option_rows[option_rows["Cash / shares needed $"] <= capital].copy()
+                option_rows["Premium / collateral %"] = option_rows["Premium / contract $"] / option_rows["Cash / shares needed $"] * 100
+                option_rows = option_rows.sort_values(["Est. profit probability %", "Premium / collateral %"], ascending=False).head(15).reset_index(drop=True)
+            st.session_state["option_scan_rows"] = option_rows
+            st.session_state["option_scan_note"] = f"Checked {checked} liquid, price-screened stocks; {failures} option-chain requests failed or were unavailable. This is a shortlist, not a scan of every listed option contract."
+    if "option_scan_rows" in st.session_state:
+        st.caption(st.session_state.get("option_scan_note", ""))
+        option_rows = st.session_state["option_scan_rows"]
+        if option_rows.empty:
+            st.info("No contracts passed the quote-quality, open-interest, expiration, strategy, and account-size filters. Try a larger account size, wider expiration window, or smaller minimum open interest.")
+        else:
+            st.markdown("**Top candidates, sorted by estimated profit probability and then premium yield**")
+            st.dataframe(option_rows, hide_index=True, use_container_width=True, column_config={
+                "Stock price $": st.column_config.NumberColumn(format="$%.2f"),
+                "Strike $": st.column_config.NumberColumn(format="$%.2f"),
+                "Bid $": st.column_config.NumberColumn(format="$%.2f"),
+                "Ask $": st.column_config.NumberColumn(format="$%.2f"),
+                "Mid premium $/share": st.column_config.NumberColumn(format="$%.2f"),
+                "Premium / contract $": st.column_config.NumberColumn(format="$%.2f"),
+                "Break-even $": st.column_config.NumberColumn(format="$%.2f"),
+                "Cash / shares needed $": st.column_config.NumberColumn(format="$%.2f"),
+                "Max gain $": st.column_config.NumberColumn(format="$%.2f"),
+                "Max loss $": st.column_config.NumberColumn(format="$%.2f"),
+                "Est. profit probability %": st.column_config.NumberColumn(format="%.1f%%"),
+                "Premium / collateral %": st.column_config.NumberColumn(format="%.2f%%"),
+                "Annualized premium / collateral %": st.column_config.NumberColumn(format="%.1f%%"),
+                "OTM distance %": st.column_config.NumberColumn(format="%.2f%%"),
+                "IV %": st.column_config.NumberColumn(format="%.1f%%"),
+                "Bid-ask spread %": st.column_config.NumberColumn(format="%.1f%%"),
+                "Reward / max loss": st.column_config.NumberColumn(format="%.3f"),
+            })
+            st.download_button("Download options scan CSV", option_rows.to_csv(index=False), "options_income_candidates.csv", "text/csv")
+    with st.expander("How probability, reward, and risk are calculated"):
+        st.write("Profit probability is an estimate from the option's implied volatility using a simple lognormal expiration-price model with zero rates and dividends. It is not a guaranteed chance or a backtested win rate; actual returns can differ because prices move, volatility changes, quotes may be delayed, and execution costs/early assignment are not modeled. Public options educators describe Delta as a probability proxy, but this dashboard uses a separate breakeven-based model.")
+        st.write("Premium uses the bid/ask midpoint, which may not be an executable fill. Premium yield is the midpoint per contract divided by the cash or shares required. Annualized yield simply scales that one-cycle yield by 365 ÷ days to expiration; it assumes the same yield could repeat and is not a forecast. Maximum loss assumes the stock can fall to zero. Contracts are ranked by modeled profit probability, then one-cycle premium yield—not by a hidden AI score.")
+        st.markdown("Learn more: [Cash-secured puts](https://www.optionseducation.org/strategies/all-strategies/cash-secured-put) · [Covered calls](https://www.optionseducation.org/strategies/all-strategies/covered-call-buy-write) · [Options probability calculator](https://www.optionseducation.org/Options-Quotes-Calculators) · [OCC options risk disclosure](https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document)")
+
 with st.expander("How sizing and the goal tracker work"):
     st.write(f"Risk budget per trade is ${capital * risk_pct / 100:,.2f} at the selected {risk_pct:.2f}% account risk. Reference stops use the lower of the recent 10-day low or a 6% reference distance. Share counts are capped so the position value does not exceed the account balance. Actual fills, gaps, fees, and losses can differ substantially.")
     st.write("A $1,000 to $10,000 year-end target requires an exceptionally high compounded return, especially late in the year. The dashboard shows the arithmetic pace only; it does not predict or promise that outcome.")
+
