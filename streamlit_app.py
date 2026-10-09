@@ -210,8 +210,9 @@ def score_frame(symbol, df):
 
 with st.sidebar:
     st.header("Scan settings")
-    capital = st.number_input("Account size (USD)", min_value=100, value=1000, step=100)
+    capital = st.number_input("Account size (USD)", min_value=100, value=300, step=50)
     risk_pct = st.slider("Risk per trade (%)", 0.25, 2.0, 0.5, 0.25)
+    st.caption(f"Planned risk at this setting: ${capital * risk_pct / 100:,.2f} per trade. This is a sizing estimate, not a guaranteed maximum loss.")
     min_price = st.number_input("Minimum share price", min_value=0.0, value=5.0, step=1.0)
     min_dollar_vol = st.number_input("Minimum average daily $ volume (M)", min_value=0.0, value=10.0, step=5.0)
     universe_name = st.selectbox("Stock universe", ["All US exchange listings", "SPY holdings (S&P 500)", "My watchlist"])
@@ -356,7 +357,7 @@ with tab4:
 
 with tab5:
     st.subheader("Options income scan")
-    st.caption("Automatically screen the stocks already checked by the dashboard, then compare liquid cash-secured puts and covered calls. The scan prioritizes contracts that fit your account and ranks them by modeled profit probability, then premium yield. A standard equity option contract represents 100 shares.")
+    st.caption("Currently this scans option chains only for a limited shortlist of stocks that passed the stock scan; it does not check every optionable ticker. Results appear here after you click the scan button; there are no email or phone alerts. A standard equity option contract usually represents 100 shares, so cash-secured puts and covered calls often need more than a $300 account.")
     st.warning("Option selling can lose substantially more than the premium collected. A cash-secured put can require buying 100 shares; a covered call requires owning 100 shares. This tool is educational and does not place trades.")
     with st.form("options_scan_form"):
         scan_strategies = st.selectbox("Strategies to compare", ["Both", "Cash-secured puts", "Covered calls"])
