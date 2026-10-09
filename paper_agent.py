@@ -23,7 +23,7 @@ STATE_PATH = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("paper_challenge_s
 STARTING_CASH = 100.0
 TARGET_BALANCE = 1000.0
 MAX_POSITIONS = 3
-MAX_POSITION_DOLLARS = 15.0
+MAX_POSITION_FRACTION = 0.15
 STOP_PCT = 0.05
 BOT_PREFIX = "tl100-"
 TRADE_API = "https://paper-api.alpaca.markets/v2"
@@ -211,8 +211,6 @@ def apply_filled_order(state: dict, pending: dict, order: dict) -> None:
     price = float(order.get("filled_avg_price") or pending.get("price") or 0)
     if order.get("terminal_unfilled"):
         append_trade(state, "CANCELLED", symbol, 0, price, f"Paper order {order.get('status')}; no fill")
-        if side == "buy":
-            state["cash"] = min(STARTING_CASH, float(state["cash"]) + float(pending["notional"]))
         return
     if side == "buy" and qty > 0 and price > 0:
         state["cash"] = max(0.0, float(state["cash"]) - qty * price)
@@ -223,7 +221,7 @@ def apply_filled_order(state: dict, pending: dict, order: dict) -> None:
         })
         append_trade(state, "BUY", symbol, qty, price, "Filled by Alpaca paper trading")
     elif side == "sell" and qty > 0 and price > 0:
-        state["cash"] = min(STARTING_CASH, float(state["cash"]) + qty * price)
+        state["cash"] = float(state["cash"]) + qty * price
         state["positions"] = [p for p in state["positions"] if p["symbol"] != symbol]
         append_trade(state, "SELL", symbol, qty, price, "Exit filled by Alpaca paper trading")
 
@@ -303,7 +301,9 @@ def run() -> None:
                 continue
             if row["symbol"] in owned or row["symbol"] not in prices:
                 continue
-            budget = min(MAX_POSITION_DOLLARS, max(0.0, float(state["cash"]) - reserved))
+            invested = sum(float(p["qty"]) * float(p["last_price"]) for p in state["positions"])
+            position_limit = (float(state["cash"]) + invested) * MAX_POSITION_FRACTION
+            budget = min(position_limit, max(0.0, float(state["cash"]) - reserved))
             if budget < 1.0:
                 break
             send_order(api, state, row["symbol"], row["asset_class"], "buy", budget, price=row["price"])
