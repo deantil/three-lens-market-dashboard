@@ -87,8 +87,8 @@ def append_trade(state: dict, action: str, symbol: str, qty: float, price: float
 
 
 def credentials() -> tuple[str, str]:
-    key = os.getenv("APCA_API_KEY_ID") or os.getenv("ALPACA_API_KEY") or ""
-    secret = os.getenv("APCA_API_SECRET_KEY") or os.getenv("ALPACA_API_SECRET") or ""
+    key = os.getenv("CHATGPT_APCA_API_KEY_ID") or ""
+    secret = os.getenv("CHATGPT_APCA_API_SECRET_KEY") or ""
     return key.strip(), secret.strip()
 
 
@@ -249,7 +249,7 @@ def run() -> None:
     key, secret = credentials()
     if not key or not secret:
         state["broker_status"] = "waiting_for_credentials"
-        state["message"] = "Add APCA_API_KEY_ID and APCA_API_SECRET_KEY to GitHub Actions secrets."
+        state["message"] = "Add CHATGPT_APCA_API_KEY_ID and CHATGPT_APCA_API_SECRET_KEY to GitHub Actions secrets."
         save_state(state)
         print(state["message"])
         return
