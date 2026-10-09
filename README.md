@@ -15,10 +15,10 @@ The dashboard and bot are for research and paper trading only. The paper agent c
 
 1. Create or open an Alpaca **paper** account and create paper API credentials.
 2. In GitHub, open **Settings → Secrets and variables → Actions → New repository secret**.
-3. Add `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY`. Paste the paper key and secret into GitHub's secret fields; never commit them or paste them into chat.
+3. Add `CHATGPT_APCA_API_KEY_ID` and `CHATGPT_APCA_API_SECRET_KEY`. Paste the paper key and secret into GitHub's secret fields; never commit them or paste them into chat.
 4. Open **Actions → $100 Alpaca paper challenge → Run workflow**. A green run and `Broker: connected_paper` in the dashboard confirm the connection.
 
-The bot pauses when it sees unrecognized open orders or holdings in the same Alpaca account. This prevents it from changing another bot's trades. If Claude's bot is using that same paper account, pause one bot before starting this one. The bot trades only a small configured list of US shares and crypto pairs; it does not scan every stock, options chain, or every crypto asset.
+The bot pauses when it sees unrecognized open orders or holdings in the same Alpaca account. This prevents it from changing another bot's trades. Use a separate Alpaca paper account from Claude's bot. This workflow reads only the `CHATGPT_...` GitHub secrets, so its credentials do not replace Claude's. The bot trades only a small configured list of US shares and crypto pairs; it does not scan every stock, options chain, or every crypto asset.
 
 ## Deployment and free-host limits
 
