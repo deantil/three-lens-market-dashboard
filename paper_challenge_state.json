@@ -4,11 +4,24 @@
   "target_balance": 1000.0,
   "cash": 100.0,
   "positions": [],
-  "pending": [],
+  "pending": [
+    {
+      "symbol": "VST",
+      "signal_date": "2026-10-07",
+      "signal_stop": 133.44000244140625
+    }
+  ],
   "trades": [],
-  "equity_history": [],
-  "last_bar_date": null,
-  "benchmark_shares": null,
-  "last_run_utc": null
+  "equity_history": [
+    {
+      "date": "2026-10-07",
+      "equity": 100.0,
+      "benchmark": 100.0,
+      "cash": 100.0,
+      "positions": 0
+    }
+  ],
+  "last_bar_date": "2026-10-07",
+  "benchmark_shares": 0.12866370367392044,
+  "last_run_utc": "2026-10-09T00:49:19.594264+00:00"
 }
-
