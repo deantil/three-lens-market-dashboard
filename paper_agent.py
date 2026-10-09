@@ -111,6 +111,10 @@ class Alpaca:
         return response.json()
 
 
+def normalized_symbol(value: str) -> str:
+    return str(value).replace("/", "").replace("-", "").upper()
+
+
 def bar_candidates(api: Alpaca) -> list[dict]:
     candidates = []
     stock_end = now()
@@ -172,9 +176,9 @@ def make_candidate(symbol: str, asset_class: str, bars: list[dict]) -> dict | No
 def reconcile_foreign_activity(api: Alpaca, state: dict) -> None:
     broker_positions = api.trade("GET", "/positions")
     open_orders = api.trade("GET", "/orders", params={"status": "open", "limit": 500})
-    tracked = {position["symbol"] for position in state["positions"]}
-    pending_symbols = {order["symbol"] for order in state["pending"]}
-    foreign_positions = [p["symbol"] for p in broker_positions if p["symbol"] not in tracked | pending_symbols]
+    tracked = {normalized_symbol(position["symbol"]) for position in state["positions"]}
+    pending_symbols = {normalized_symbol(order["symbol"]) for order in state["pending"]}
+    foreign_positions = [p["symbol"] for p in broker_positions if normalized_symbol(p["symbol"]) not in tracked | pending_symbols]
     foreign_orders = [o.get("id") for o in open_orders if not str(o.get("client_order_id", "")).startswith(BOT_PREFIX)]
     if foreign_positions or foreign_orders:
         raise RuntimeError(
@@ -184,9 +188,9 @@ def reconcile_foreign_activity(api: Alpaca, state: dict) -> None:
         )
     # A position in a symbol owned by this bot must still match its recorded
     # quantity. If another bot changes that position, stop instead of selling it.
-    actual = {p["symbol"]: float(p["qty"]) for p in broker_positions}
+    actual = {normalized_symbol(p["symbol"]): float(p["qty"]) for p in broker_positions}
     for position in state["positions"]:
-        broker_qty = actual.get(position["symbol"], 0.0)
+        broker_qty = actual.get(normalized_symbol(position["symbol"]), 0.0)
         expected = float(position["qty"])
         if abs(broker_qty - expected) > max(1e-6, expected * 0.02):
             raise RuntimeError(f"Quantity mismatch for {position['symbol']}; another process may be trading it. No order was sent.")
@@ -320,8 +324,8 @@ def run() -> None:
         state["pending"] = still_pending
 
         broker_positions = api.trade("GET", "/positions")
-        owned_symbols = {p["symbol"] for p in state["positions"]}
-        if any(p["symbol"] not in owned_symbols for p in broker_positions):
+        owned_symbols = {normalized_symbol(p["symbol"]) for p in state["positions"]}
+        if any(normalized_symbol(p["symbol"]) not in owned_symbols for p in broker_positions):
             raise RuntimeError("Unexpected broker position detected after order processing; trading paused.")
         broker_equity = float(account.get("equity", STARTING_CASH))
         invested = sum(float(p["qty"]) * float(p["last_price"]) for p in state["positions"])
