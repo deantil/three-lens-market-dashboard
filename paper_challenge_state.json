@@ -1,27 +1,16 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "engine": "Alpaca paper trading",
   "starting_cash": 100.0,
   "target_balance": 1000.0,
   "cash": 100.0,
   "positions": [],
-  "pending": [
-    {
-      "symbol": "VST",
-      "signal_date": "2026-10-07",
-      "signal_stop": 133.44000244140625
-    }
-  ],
+  "pending": [],
   "trades": [],
-  "equity_history": [
-    {
-      "date": "2026-10-07",
-      "equity": 100.0,
-      "benchmark": 100.0,
-      "cash": 100.0,
-      "positions": 0
-    }
-  ],
-  "last_bar_date": "2026-10-07",
-  "benchmark_shares": 0.12866370367392044,
-  "last_run_utc": "2026-10-09T00:49:19.594264+00:00"
+  "equity_history": [],
+  "last_bar_date": null,
+  "last_run_utc": null,
+  "broker_status": "waiting_for_credentials",
+  "broker_equity": null,
+  "message": "Add APCA_API_KEY_ID and APCA_API_SECRET_KEY to GitHub Actions secrets."
 }
