@@ -7,21 +7,29 @@ This repository powers the [Three Lens Market Dashboard](https://three-lens-mark
 - Scans US-listed stocks using the Nasdaq Trader listings, SPY holdings, or a personal watchlist.
 - Shows daily trend, breakout, momentum, and volume checks, plus a one-ticker lookup.
 - Includes an educational options-income shortlist for selected cash-secured puts and covered calls.
-- Includes a **$100 to $1,000 paper-trading challenge**. A free GitHub Action scans SPY holdings after US market days, waits for a newer daily bar before simulating fills, holds up to three fractional-share positions, and tracks a stop-based exit rule against SPY.
+- Includes an **Alpaca paper-trading challenge** with a $100 strategy budget. GitHub Actions checks a small liquid stock and crypto list about every 15 minutes, can submit paper orders, and tracks up to three positions with a 5% reference stop.
 
-The app is for research and paper trading only. It cannot connect to a brokerage or place real orders. Price and options data from Yahoo Finance can be delayed, incomplete, unavailable, or rate-limited. The paper challenge is a simple rule-based experiment, not an AI that learns, a validated profitable strategy, or a promise to turn $100 into $1,000. It is not a self-editing software agent.
+The dashboard and bot are for research and paper trading only. The paper agent connects only to Alpaca's paper trading host; it has no live-trading endpoint. It uses a separate $100 strategy ledger even though Alpaca paper accounts can display a larger virtual balance. The challenge is a simple rule-based experiment, not an AI that learns, a validated profitable strategy, or a promise to turn $100 into $1,000. It is not a self-editing software agent.
+
+## Connect the Alpaca paper account
+
+1. Create or open an Alpaca **paper** account and create paper API credentials.
+2. In GitHub, open **Settings → Secrets and variables → Actions → New repository secret**.
+3. Add `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY`. Paste the paper key and secret into GitHub's secret fields; never commit them or paste them into chat.
+4. Open **Actions → $100 Alpaca paper challenge → Run workflow**. A green run and `Broker: connected_paper` in the dashboard confirm the connection.
+
+The bot pauses when it sees unrecognized open orders or holdings in the same Alpaca account. This prevents it from changing another bot's trades. If Claude's bot is using that same paper account, pause one bot or use a separate account before starting this one. The bot trades only a small configured list of US shares and crypto pairs; it does not scan every stock, options chain, or every crypto asset.
 
 ## Deployment and free-host limits
 
 Streamlit Community Cloud is connected to this repository. Updates pushed to `main` trigger a rebuild. The main app file is `streamlit_app.py`.
 
-Community Cloud may hibernate the app after 12 hours without traffic. The paper-state JSON is published on the public `paper-state` branch and displayed by the app. GitHub Actions runs the paper agent once on weekdays after the US close; scheduled runs can be delayed. This keeps the paper account running independently from a sleeping Streamlit page, but it is not an always-on quote feed.
+Community Cloud may hibernate the app after 12 hours without traffic. The paper-state JSON is published on the public `paper-state` branch and displayed by the app. GitHub Actions schedules the paper agent every 15 minutes, including weekends for crypto; scheduled runs can be delayed or skipped. This is periodic automation, not continuous monitoring or guaranteed 24/7 uptime.
 
 The scanner is currently for US-listed stocks and daily price bars. To support a 24/7 asset class later, add a separate data provider, symbol list, trading calendar, and data-freshness checks. This app does not promise always-on uptime or real-time quotes.
 
 ## Risk notes
 
-A standard equity option contract generally represents 100 shares. A cash-secured put may require enough cash to buy 100 shares; a covered call requires owning 100 shares. Option writers can lose substantially more than the premium received. Review the [OCC options disclosure](https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document).
+A standard equity option contract generally represents 100 shares. The $100 challenge does not trade options. Review the [OCC options disclosure](https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document) before using options.
 
 The $1,000 target is a challenge goal for paper tracking, not a forecast. Past or simulated results do not guarantee future outcomes.
-
