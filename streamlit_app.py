@@ -214,11 +214,11 @@ with st.sidebar:
     risk_pct = st.slider("Risk per trade (%)", 0.25, 2.0, 0.5, 0.25)
     min_price = st.number_input("Minimum share price", min_value=0.0, value=5.0, step=1.0)
     min_dollar_vol = st.number_input("Minimum average daily $ volume (M)", min_value=0.0, value=10.0, step=5.0)
-    universe_name = st.selectbox("Stock universe", ["All US exchange listings", "SPY holdings (S&P 500)", "My watchlist"], index=1)
+    universe_name = st.selectbox("Stock universe", ["All US exchange listings", "SPY holdings (S&P 500)", "My watchlist"])
     watchlist_text = "NVDA AMD TSLA PLTR SMCI AVGO MU ARM CRWD NET SNOW DDOG SHOP COIN HOOD SOFI AFRM UPST RBLX APP RKLB IONQ HIMS CELH ELF ONON DKNG ROKU TTD MELI SE NU MSTR MARA RIOT AXON CAVA ANF DECK UBER ABNB DASH ENPH FSLR RIVN CVNA OPEN SOUN RGTI U W LULU"
     if universe_name == "My watchlist":
         watchlist_text = st.text_area("Tickers (spaces or commas are okay)", value=watchlist_text, height=110)
-    limit = st.select_slider("Symbols to scan", options=[100, 250, 500, 1000], value=500)
+    limit = st.select_slider("Symbols to scan", options=[100, 250, 500, 1000, 2500, 5000, 10000], value=10000)
     if st.button("Refresh universe and prices", type="primary", use_container_width=True):
         get_universe.clear(); get_prices.clear()
         st.rerun()
@@ -233,14 +233,8 @@ try:
     with st.spinner("Loading listed-stock universe…"):
         universe = get_universe(universe_name, watchlist_text)
     source_note = "Nasdaq and other US exchanges" if universe_name == "All US exchange listings" else "State Street SPY fund holdings" if universe_name == "SPY holdings (S&P 500)" else "your typed tickers"
-    st.caption(f"Universe: {universe_name} · Source: {source_note} · {len(universe):,} symbols received. Scanning up to {limit:,}; large universes are sampled evenly to stay within the free app's resource limits. Price history availability depends on Yahoo Finance.")
-    if len(universe) <= limit:
-        symbols = universe
-    else:
-        # Sample across the full sorted universe instead of silently scanning
-        # only tickers near the beginning of the alphabet.
-        positions = [round(i * (len(universe) - 1) / (limit - 1)) for i in range(limit)]
-        symbols = [universe[position] for position in positions]
+    st.caption(f"Universe: {universe_name} · Source: {source_note} · {len(universe):,} symbols received. Scanning up to {limit:,}; set the slider to 10,000 to attempt every symbol in this universe. Some symbols may have no usable Yahoo Finance price history.")
+    symbols = universe[:limit]
     with st.spinner(f"Downloading daily history for {len(symbols):,} symbols…"):
         price_map = get_prices(symbols)
     rows = [score_frame(s, d) for s, d in price_map.items()]
