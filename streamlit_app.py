@@ -458,42 +458,48 @@ with tab6:
     st.warning("Paper trading only. Orders go to Alpaca's paper endpoint; no live-trading endpoint is configured. The bot starts with $100 and cannot promise a profit or a 10× return.")
     st.caption("The free GitHub Action checks a small liquid US stock and crypto list about every 15 minutes. It uses an hourly breakout with volume confirmation, up to 15% of strategy equity per position, and a 5% reference stop. It does not trade options; scheduled runs may be delayed and losses can exceed the reference stop.")
     st.link_button("Open the paper-agent runs", "https://github.com/deantil/three-lens-market-dashboard/actions/workflows/paper-challenge.yml")
-    try:
-        agent_state = get_paper_state()
-        history = agent_state.get("equity_history", [])
-        if not history:
-            st.info(agent_state.get("message") or "Waiting for the first paper run. Open Actions and choose Run workflow.")
-        else:
-            latest = history[-1]
-            equity = float(latest.get("equity", agent_state.get("cash", 100)))
-            target = float(agent_state.get("target_balance", 1000))
-            start = float(agent_state.get("starting_cash", 100))
-            progress = max(0.0, min(1.0, (equity - start) / max(target - start, 1)))
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Paper balance", f"${equity:,.2f}", f"{equity - start:+,.2f} vs. start")
-            m2.metric("Cash", f"${float(agent_state.get('cash', 0)):,.2f}")
-            m3.metric("Open positions", str(len(agent_state.get("positions", []))))
-            st.progress(progress)
-            st.caption(f"Target: ${target:,.0f} · Latest daily bar: {agent_state.get('last_bar_date') or 'waiting'} · Last agent run (UTC): {agent_state.get('last_run_utc') or 'not run yet'} · State is public in this repository.")
+    if st.button("Load latest paper-agent report"):
+        st.session_state["load_paper_report"] = True
 
-            if history:
-                history_frame = pd.DataFrame(history)
-                if {"date", "equity"}.issubset(history_frame.columns):
-                    st.line_chart(history_frame.set_index("date")[["equity"]], height=260)
-            if agent_state.get("positions"):
-                st.markdown("**Open paper positions**")
-                st.dataframe(pd.DataFrame(agent_state["positions"]), hide_index=True, use_container_width=True)
+    if st.session_state.get("load_paper_report", False):
+        try:
+            agent_state = get_paper_state()
+            history = agent_state.get("equity_history", [])
+            if not history:
+                st.info(agent_state.get("message") or "Waiting for the first paper run. Open Actions and choose Run workflow.")
             else:
-                st.info("No open paper positions. The agent waits when no stocks pass its rules.")
-            if agent_state.get("pending"):
-                st.markdown("**Signals waiting for the next daily close**")
-                st.dataframe(pd.DataFrame(agent_state["pending"]), hide_index=True, use_container_width=True)
-            if agent_state.get("trades"):
-                st.markdown("**Recent paper trades**")
-                st.dataframe(pd.DataFrame(agent_state["trades"][-20:]).iloc[::-1], hide_index=True, use_container_width=True)
-            st.download_button("Download paper challenge history", json.dumps(agent_state, indent=2), "paper_challenge_state.json", "application/json", key="agent_state_download")
-    except Exception as exc:
-        st.error(f"Could not load the latest paper-agent report: {exc}")
+                latest = history[-1]
+                equity = float(latest.get("equity", agent_state.get("cash", 100)))
+                target = float(agent_state.get("target_balance", 1000))
+                start = float(agent_state.get("starting_cash", 100))
+                progress = max(0.0, min(1.0, (equity - start) / max(target - start, 1)))
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Paper balance", f"${equity:,.2f}", f"{equity - start:+,.2f} vs. start")
+                m2.metric("Cash", f"${float(agent_state.get('cash', 0)):,.2f}")
+                m3.metric("Open positions", str(len(agent_state.get("positions", []))))
+                st.progress(progress)
+                st.caption(f"Target: ${target:,.0f} · Latest daily bar: {agent_state.get('last_bar_date') or 'waiting'} · Last agent run (UTC): {agent_state.get('last_run_utc') or 'not run yet'} · State is public in this repository.")
+    
+                if history:
+                    history_frame = pd.DataFrame(history)
+                    if {"date", "equity"}.issubset(history_frame.columns):
+                        st.line_chart(history_frame.set_index("date")[["equity"]], height=260)
+                if agent_state.get("positions"):
+                    st.markdown("**Open paper positions**")
+                    st.dataframe(pd.DataFrame(agent_state["positions"]), hide_index=True, use_container_width=True)
+                else:
+                    st.info("No open paper positions. The agent waits when no stocks pass its rules.")
+                if agent_state.get("pending"):
+                    st.markdown("**Signals waiting for the next daily close**")
+                    st.dataframe(pd.DataFrame(agent_state["pending"]), hide_index=True, use_container_width=True)
+                if agent_state.get("trades"):
+                    st.markdown("**Recent paper trades**")
+                    st.dataframe(pd.DataFrame(agent_state["trades"][-20:]).iloc[::-1], hide_index=True, use_container_width=True)
+                st.download_button("Download paper challenge history", json.dumps(agent_state, indent=2), "paper_challenge_state.json", "application/json", key="agent_state_download")
+        except Exception as exc:
+            st.error(f"Could not load the latest paper-agent report: {exc}")
+    else:
+        st.info("The dashboard is ready. Click **Load latest paper-agent report** to fetch the paper bot status.")
     st.caption("Alpaca paper fills are simulated and may differ from real execution. The bot checks periodically, not continuously; GitHub runs can be delayed or skipped. It cannot learn or rewrite its rules by itself.")
 
 
