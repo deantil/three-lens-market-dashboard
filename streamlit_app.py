@@ -449,14 +449,14 @@ with tab5:
 
 with tab6:
     st.subheader("$100 to $1,000 · free paper-trading challenge")
-    st.warning("Paper trading only. This agent cannot access a brokerage or place real orders. It cannot promise or guarantee a 10× return.")
-    st.caption("A free, rule-based GitHub Action scans SPY holdings after US market days. It looks for a 20-day breakout, confirming volume, and a Trader score of at least 4/5. Signals are filled at the next available daily close, with up to three fractional-share positions and a trailing reference stop. It compares the result with buying SPY. This is an experiment, not a validated strategy or an AI that rewrites trading rules.")
+    st.warning("Paper trading only. Orders go to Alpaca's paper endpoint; no live-trading endpoint is configured. The bot has a hard $100 strategy budget and cannot promise profit.")
+    st.caption("The free GitHub Action checks a small liquid US stock and crypto list about every 15 minutes. It uses an hourly breakout with volume confirmation, up to $15 per position, and a 5% reference stop. It does not trade options; scheduled runs may be delayed and losses can exceed the reference stop.")
     st.link_button("Open the paper-agent runs", "https://github.com/deantil/three-lens-market-dashboard/actions/workflows/paper-challenge.yml")
     try:
         agent_state = get_paper_state()
         history = agent_state.get("equity_history", [])
         if not history:
-            st.info("The free paper agent has not completed its first scan yet. Use the link above and choose **Run workflow** to start it, or wait for its next scheduled run.")
+            st.info(agent_state.get("message") or "Waiting for the first paper run. Open Actions and choose Run workflow.")
         else:
             latest = history[-1]
             equity = float(latest.get("equity", agent_state.get("cash", 100)))
@@ -466,14 +466,14 @@ with tab6:
             m1, m2, m3 = st.columns(3)
             m1.metric("Paper balance", f"${equity:,.2f}", f"{equity - start:+,.2f} vs. start")
             m2.metric("Cash", f"${float(agent_state.get('cash', 0)):,.2f}")
-            m3.metric("SPY comparison", f"${float(latest.get('benchmark', start)):,.2f}")
+            m3.metric("Open positions", str(len(agent_state.get("positions", []))))
             st.progress(progress)
             st.caption(f"Target: ${target:,.0f} · Latest daily bar: {agent_state.get('last_bar_date') or 'waiting'} · Last agent run (UTC): {agent_state.get('last_run_utc') or 'not run yet'} · State is public in this repository.")
 
             if history:
                 history_frame = pd.DataFrame(history)
-                if {"date", "equity", "benchmark"}.issubset(history_frame.columns):
-                    st.line_chart(history_frame.set_index("date")[["equity", "benchmark"]], height=260)
+                if {"date", "equity"}.issubset(history_frame.columns):
+                    st.line_chart(history_frame.set_index("date")[["equity"]], height=260)
             if agent_state.get("positions"):
                 st.markdown("**Open paper positions**")
                 st.dataframe(pd.DataFrame(agent_state["positions"]), hide_index=True, use_container_width=True)
@@ -488,7 +488,7 @@ with tab6:
             st.download_button("Download paper challenge history", json.dumps(agent_state, indent=2), "paper_challenge_state.json", "application/json", key="agent_state_download")
     except Exception as exc:
         st.error(f"Could not load the latest paper-agent report: {exc}")
-    st.caption("This free agent runs once after the US stock market closes on weekdays; it is not a 24/7 quote feed or an AI software engineer. GitHub's scheduled runs can be delayed. Data can be stale or unavailable. Simulated fills ignore commissions, spread, taxes, and slippage; real stop orders can fill worse during price gaps.")
+    st.caption("Alpaca paper fills are simulated and may differ from real execution. The bot checks periodically, not continuously; GitHub runs can be delayed or skipped. It cannot learn or rewrite its rules by itself.")
 
 
 with st.expander("How sizing and the goal tracker work"):
