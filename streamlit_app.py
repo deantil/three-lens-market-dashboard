@@ -220,7 +220,9 @@ with st.sidebar:
     if universe_name == "My watchlist":
         watchlist_text = st.text_area("Tickers (spaces or commas are okay)", value=watchlist_text, height=110)
     limit = st.select_slider("Symbols to scan", options=[100, 250, 500, 1000, 2500, 5000, 10000], value=10000)
-    if st.button("Refresh universe and prices", type="primary", use_container_width=True):
+    if st.button("Scan selected stock universe", type="primary", use_container_width=True):
+        st.session_state["market_scan_requested"] = True
+    if st.button("Refresh universe and prices", use_container_width=True):
         get_universe.clear(); get_prices.clear()
         st.rerun()
     st.divider()
@@ -230,32 +232,36 @@ with st.sidebar:
     req_daily = ((goal / capital) ** (1 / days_left) - 1) * 100 if capital else 0
     st.metric("Daily compounded return needed", f"{req_daily:.2f}%", help=f"Mathematical pace for {days_left} calendar days. This is not a forecast or a realistic expectation.")
 
-try:
-    with st.spinner("Loading listed-stock universe…"):
-        universe = get_universe(universe_name, watchlist_text)
-    source_note = "Nasdaq and other US exchanges" if universe_name == "All US exchange listings" else "State Street SPY fund holdings" if universe_name == "SPY holdings (S&P 500)" else "your typed tickers"
-    st.caption(f"Universe: {universe_name} · Source: {source_note} · {len(universe):,} symbols received. Scanning up to {limit:,}; set the slider to 10,000 to attempt every symbol in this universe. Some symbols may have no usable Yahoo Finance price history.")
-    symbols = universe[:limit]
-    with st.spinner(f"Downloading daily history for {len(symbols):,} symbols…"):
-        price_map = get_prices(symbols)
-    rows = [score_frame(s, d) for s, d in price_map.items()]
-    rows = [r for r in rows if r and r["Price"] >= min_price]
-    results = pd.DataFrame(rows)
-    paper_results = results.copy()
-    if not results.empty:
-        results = results.sort_values(["Trader score", "Omni score"], ascending=False).reset_index(drop=True)
-        risk_usd = capital * risk_pct / 100
-        results["Risk-sized shares"] = ((risk_usd / (results["Price"] - results["Reference stop"]).clip(lower=.01))).astype(int)
-        results["Estimated position $"] = results["Risk-sized shares"] * results["Price"]
-        results = results[(results["Estimated position $"] <= capital) & (results["Risk-sized shares"] > 0)]
-        results = results[results["Average $ volume"] >= min_dollar_vol * 1_000_000].copy()
-    else:
-        st.warning("No daily price histories were returned. Try refreshing, or use a smaller symbol limit.")
-except Exception as exc:
+if not st.session_state.get("market_scan_requested", False):
     universe = []; price_map = {}; results = pd.DataFrame(); paper_results = pd.DataFrame()
-    st.error(f"Market data could not be loaded: {exc}")
-    st.info("The dashboard needs an internet connection. It uses Nasdaq Trader listings, State Street SPY holdings, and Yahoo Finance prices.")
-
+    st.info("The dashboard is ready. Click **Scan selected stock universe** in the left sidebar to load market data. Stock Lookup and the paper challenge are available without scanning the full market.")
+else:
+    try:
+        with st.spinner("Loading listed-stock universe…"):
+            universe = get_universe(universe_name, watchlist_text)
+        source_note = "Nasdaq and other US exchanges" if universe_name == "All US exchange listings" else "State Street SPY fund holdings" if universe_name == "SPY holdings (S&P 500)" else "your typed tickers"
+        st.caption(f"Universe: {universe_name} · Source: {source_note} · {len(universe):,} symbols received. Scanning up to {limit:,}; set the slider to 10,000 to attempt every symbol in this universe. Some symbols may have no usable Yahoo Finance price history.")
+        symbols = universe[:limit]
+        with st.spinner(f"Downloading daily history for {len(symbols):,} symbols…"):
+            price_map = get_prices(symbols)
+        rows = [score_frame(s, d) for s, d in price_map.items()]
+        rows = [r for r in rows if r and r["Price"] >= min_price]
+        results = pd.DataFrame(rows)
+        paper_results = results.copy()
+        if not results.empty:
+            results = results.sort_values(["Trader score", "Omni score"], ascending=False).reset_index(drop=True)
+            risk_usd = capital * risk_pct / 100
+            results["Risk-sized shares"] = ((risk_usd / (results["Price"] - results["Reference stop"]).clip(lower=.01))).astype(int)
+            results["Estimated position $"] = results["Risk-sized shares"] * results["Price"]
+            results = results[(results["Estimated position $"] <= capital) & (results["Risk-sized shares"] > 0)]
+            results = results[results["Average $ volume"] >= min_dollar_vol * 1_000_000].copy()
+        else:
+            st.warning("No daily price histories were returned. Try refreshing, or use a smaller symbol limit.")
+    except Exception as exc:
+        universe = []; price_map = {}; results = pd.DataFrame(); paper_results = pd.DataFrame()
+        st.error(f"Market data could not be loaded: {exc}")
+        st.info("The dashboard needs an internet connection. It uses Nasdaq Trader listings, State Street SPY holdings, and Yahoo Finance prices.")
+    
 if not results.empty:
     a, b, c = st.columns(3)
     a.metric("Symbols with data", f"{len(price_map):,}")
