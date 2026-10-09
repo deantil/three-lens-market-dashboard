@@ -19,7 +19,7 @@
   ],
   "last_bar_date": null,
   "last_run_utc": "2026-10-09T18:33:09.725634+00:00",
-  "broker_status": "connected_paper",
+  "broker_status": "waiting_for_credentials",
   "broker_equity": 300.0,
-  "message": "Paper trading only. Bot allocation is capped at $100; no live endpoint is configured."
+  "message": "Add CHATGPT_APCA_API_KEY_ID and CHATGPT_APCA_API_SECRET_KEY to GitHub Actions secrets."
 }
