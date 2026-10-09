@@ -83,7 +83,7 @@ def get_universe(universe_name, custom_text=""):
 
 @st.cache_data(ttl=900, show_spinner=False)
 def get_prices(symbols, period="1y"):
-    data = yf.download(symbols, period=period, interval="1d", auto_adjust=True, group_by="ticker", progress=False, threads=4)
+    data = yf.download(symbols, period=period, interval="1d", auto_adjust=True, group_by="ticker", progress=False, threads=False)
     out = {}
     if data.empty: return out
     if isinstance(data.columns, pd.MultiIndex):
