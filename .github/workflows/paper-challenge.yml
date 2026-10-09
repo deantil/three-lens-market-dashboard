@@ -50,10 +50,8 @@ jobs:
 
       - name: Run one paper-trading step
         env:
-          APCA_API_KEY_ID: ${{ secrets.CHATGPT_APCA_API_KEY_ID }}
-          APCA_API_SECRET_KEY: ${{ secrets.CHATGPT_APCA_API_SECRET_KEY }}
-          ALPACA_API_KEY: 
-          ALPACA_API_SECRET: 
+          CHATGPT_APCA_API_KEY_ID: ${{ secrets.CHATGPT_APCA_API_KEY_ID }}
+          CHATGPT_APCA_API_SECRET_KEY: ${{ secrets.CHATGPT_APCA_API_SECRET_KEY }}
         run: python paper_agent.py paper_challenge_state.json
 
       - name: Publish updated paper state
