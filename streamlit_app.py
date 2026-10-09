@@ -449,8 +449,8 @@ with tab5:
 
 with tab6:
     st.subheader("$100 to $1,000 · free paper-trading challenge")
-    st.warning("Paper trading only. Orders go to Alpaca's paper endpoint; no live-trading endpoint is configured. The bot has a hard $100 strategy budget and cannot promise profit.")
-    st.caption("The free GitHub Action checks a small liquid US stock and crypto list about every 15 minutes. It uses an hourly breakout with volume confirmation, up to $15 per position, and a 5% reference stop. It does not trade options; scheduled runs may be delayed and losses can exceed the reference stop.")
+    st.warning("Paper trading only. Orders go to Alpaca's paper endpoint; no live-trading endpoint is configured. The bot starts with $100 and cannot promise a profit or a 10× return.")
+    st.caption("The free GitHub Action checks a small liquid US stock and crypto list about every 15 minutes. It uses an hourly breakout with volume confirmation, up to 15% of strategy equity per position, and a 5% reference stop. It does not trade options; scheduled runs may be delayed and losses can exceed the reference stop.")
     st.link_button("Open the paper-agent runs", "https://github.com/deantil/three-lens-market-dashboard/actions/workflows/paper-challenge.yml")
     try:
         agent_state = get_paper_state()
