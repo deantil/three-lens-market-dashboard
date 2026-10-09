@@ -7,10 +7,19 @@
   "positions": [],
   "pending": [],
   "trades": [],
-  "equity_history": [],
+  "equity_history": [
+    {
+      "date": "2026-10-09T18:33:09.725653+00:00",
+      "equity": 100.0,
+      "benchmark": 100.0,
+      "cash": 100.0,
+      "positions": 0,
+      "broker_equity": 300.0
+    }
+  ],
   "last_bar_date": null,
-  "last_run_utc": null,
-  "broker_status": "waiting_for_credentials",
-  "broker_equity": null,
-  "message": "Add APCA_API_KEY_ID and APCA_API_SECRET_KEY to GitHub Actions secrets."
+  "last_run_utc": "2026-10-09T18:33:09.725634+00:00",
+  "broker_status": "connected_paper",
+  "broker_equity": 300.0,
+  "message": "Paper trading only. Bot allocation is capped at $100; no live endpoint is configured."
 }
