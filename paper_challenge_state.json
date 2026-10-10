@@ -31,10 +31,18 @@
       "cash": 100.0,
       "positions": 0,
       "broker_equity": 300.0
+    },
+    {
+      "date": "2026-10-10T08:40:51.521316+00:00",
+      "equity": 100.0,
+      "benchmark": 100.0,
+      "cash": 100.0,
+      "positions": 0,
+      "broker_equity": 300.0
     }
   ],
   "last_bar_date": null,
-  "last_run_utc": "2026-10-10T02:16:58.722104+00:00",
+  "last_run_utc": "2026-10-10T08:40:51.521298+00:00",
   "broker_status": "connected_paper",
   "broker_equity": 300.0,
   "message": "Paper trading only. Bot allocation is capped at $100; no live endpoint is configured."
