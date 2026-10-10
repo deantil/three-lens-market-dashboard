@@ -456,7 +456,7 @@ with tab5:
 with tab6:
     st.subheader("$100 to $1,000 · free paper-trading challenge")
     st.warning("Paper trading only. Orders go to Alpaca's paper endpoint; no live-trading endpoint is configured. The bot starts with $100 and cannot promise a profit or a 10× return.")
-    st.caption("The free GitHub Action checks a small liquid US stock and crypto list about every 15 minutes. It uses an hourly breakout with volume confirmation, up to 15% of strategy equity per position, and a 5% reference stop. It does not trade options; scheduled runs may be delayed and losses can exceed the reference stop.")
+    st.caption("Once daily, the paper agent scans Alpaca-tradable US equities and supported USD crypto pairs using completed daily bars. A candidate must have a 50-day uptrend above its 200-day average, a close above the previous 20-day high, volume at least 1.5× its recent average, positive 63-day momentum, and adequate dollar volume. It can hold up to three positions; each uses at most 20% of the $100 strategy equity, with planned risk capped at 0.5% of equity. This is an unvalidated paper experiment, not a profit promise.")
     st.link_button("Open the paper-agent runs", "https://github.com/deantil/three-lens-market-dashboard/actions/workflows/paper-challenge.yml")
     if st.button("Load latest paper-agent report"):
         st.session_state["load_paper_report"] = True
@@ -479,18 +479,22 @@ with tab6:
                 m3.metric("Open positions", str(len(agent_state.get("positions", []))))
                 st.progress(progress)
                 st.caption(f"Target: ${target:,.0f} · Latest daily bar: {agent_state.get('last_bar_date') or 'waiting'} · Last agent run (UTC): {agent_state.get('last_run_utc') or 'not run yet'} · State is public in this repository.")
+                summary = agent_state.get("scan_summary", {})
+                if summary:
+                    st.caption(f"Latest scan ({summary.get('strategy_version', 'unknown')}): {summary.get('eligible_stocks', 0):,} eligible stocks · {summary.get('eligible_crypto', 0):,} eligible crypto assets · {summary.get('symbols_with_200d_history', 0):,} with 200-day history · {summary.get('qualifying_signals', 0):,} passed all rules · Stock feed: {summary.get('stock_data_feed', 'unknown')}.")
     
                 if history:
                     history_frame = pd.DataFrame(history)
                     if {"date", "equity"}.issubset(history_frame.columns):
-                        st.line_chart(history_frame.set_index("date")[["equity"]], height=260)
+                        chart_columns = [column for column in ("equity", "benchmark") if column in history_frame.columns]
+                        st.line_chart(history_frame.set_index("date")[chart_columns], height=260)
                 if agent_state.get("positions"):
                     st.markdown("**Open paper positions**")
                     st.dataframe(pd.DataFrame(agent_state["positions"]), hide_index=True, use_container_width=True)
                 else:
-                    st.info("No open paper positions. The agent waits when no stocks pass its rules.")
+                    st.info("No open paper positions. The agent waits when no stock or crypto candidate passes every rule.")
                 if agent_state.get("pending"):
-                    st.markdown("**Signals waiting for the next daily close**")
+                    st.markdown("**Orders waiting for a fill**")
                     st.dataframe(pd.DataFrame(agent_state["pending"]), hide_index=True, use_container_width=True)
                 if agent_state.get("trades"):
                     st.markdown("**Recent paper trades**")
@@ -500,7 +504,7 @@ with tab6:
             st.error(f"Could not load the latest paper-agent report: {exc}")
     else:
         st.info("The dashboard is ready. Click **Load latest paper-agent report** to fetch the paper bot status.")
-    st.caption("Alpaca paper fills are simulated and may differ from real execution. The bot checks periodically, not continuously; GitHub runs can be delayed or skipped. It cannot learn or rewrite its rules by itself.")
+    st.caption("Alpaca paper fills are simulated and may differ from real execution. The bot checks once daily, not continuously; GitHub runs can be delayed or skipped. It records results but does not change its own rules. Rule changes should be compared with the SPY benchmark and risk statistics before promotion.")
 
 
 with st.expander("How sizing and the goal tracker work"):
