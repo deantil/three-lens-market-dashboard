@@ -117,7 +117,17 @@ def get_paper_state():
 
 def calculate_paper_performance(history, trades):
     """Summarize realized account observations without presenting them as a forecast."""
-    valid_rows = [row for row in history if as_number(row.get("equity")) > 0]
+    versioned_rows = [row for row in history if row.get("strategy_version")]
+    active_version = versioned_rows[-1].get("strategy_version") if versioned_rows else None
+    valid_rows = [
+        row for row in history
+        if as_number(row.get("equity")) > 0
+        and (active_version is None or row.get("strategy_version") == active_version)
+    ]
+    trades = [
+        trade for trade in trades
+        if active_version is None or trade.get("strategy_version") == active_version
+    ]
 
     def total_return(column):
         values = [as_number(row.get(column)) for row in valid_rows]
@@ -127,7 +137,7 @@ def calculate_paper_performance(history, trades):
     def max_drawdown(column):
         values = [as_number(row.get(column)) for row in valid_rows]
         values = [value for value in values if value > 0]
-        if not values:
+        if len(values) < 2:
             return None
         peak = values[0]
         worst = 0.0
@@ -558,8 +568,8 @@ with tab6:
                         drawdown = performance["agent_max_drawdown_pct"]
                         win_rate = performance["closed_trade_win_rate_pct"]
                         p1, p2, p3, p4 = st.columns(4)
-                        p1.metric("Strategy return since first record", f"{strategy_return:+.2f}%" if strategy_return is not None else "Not enough data")
-                        p2.metric("SPY return over same records", f"{spy_return:+.2f}%" if spy_return is not None else "Not enough data")
+                        p1.metric("Strategy return since this version began", f"{strategy_return:+.2f}%" if strategy_return is not None else "Not enough data")
+                        p2.metric("SPY return over same version records", f"{spy_return:+.2f}%" if spy_return is not None else "Not enough data")
                         p3.metric("Difference vs. SPY", f"{excess_return:+.2f} pp" if excess_return is not None else "Not enough data")
                         p4.metric("Largest observed drawdown", f"{drawdown:.2f}%" if drawdown is not None else "Not enough data")
                         if win_rate is None:
