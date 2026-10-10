@@ -113,6 +113,79 @@ def get_paper_state():
     response.raise_for_status()
     return response.json()
 
+
+
+def calculate_paper_performance(history, trades):
+    """Summarize realized account observations without presenting them as a forecast."""
+    versioned_rows = [row for row in history if row.get("strategy_version")]
+    active_version = versioned_rows[-1].get("strategy_version") if versioned_rows else None
+    valid_rows = [
+        row for row in history
+        if as_number(row.get("equity")) > 0
+        and (active_version is None or row.get("strategy_version") == active_version)
+    ]
+    trades = [
+        trade for trade in trades
+        if active_version is None or trade.get("strategy_version") == active_version
+    ]
+
+    def total_return(column):
+        values = [as_number(row.get(column)) for row in valid_rows]
+        values = [value for value in values if value > 0]
+        return (values[-1] / values[0] - 1) * 100 if len(values) >= 2 else None
+
+    def max_drawdown(column):
+        values = [as_number(row.get(column)) for row in valid_rows]
+        values = [value for value in values if value > 0]
+        if len(values) < 2:
+            return None
+        peak = values[0]
+        worst = 0.0
+        for value in values:
+            peak = max(peak, value)
+            worst = min(worst, value / peak - 1)
+        return worst * 100
+
+    lots = {}
+    closed_trade_pnl = []
+    for trade in trades:
+        action = str(trade.get("action", "")).upper()
+        symbol = str(trade.get("symbol", ""))
+        qty = max(0.0, as_number(trade.get("shares")))
+        price = max(0.0, as_number(trade.get("price")))
+        if not symbol or qty <= 0 or price <= 0:
+            continue
+        if action == "BUY":
+            lots.setdefault(symbol, []).append([qty, price])
+        elif action == "SELL":
+            remaining = qty
+            realized = 0.0
+            matched = 0.0
+            for lot in lots.get(symbol, []):
+                portion = min(remaining, lot[0])
+                if portion > 0:
+                    realized += portion * (price - lot[1])
+                    lot[0] -= portion
+                    remaining -= portion
+                    matched += portion
+                if remaining <= 1e-8:
+                    break
+            lots[symbol] = [lot for lot in lots.get(symbol, []) if lot[0] > 1e-8]
+            if matched > 0 and remaining <= 1e-8:
+                closed_trade_pnl.append(realized)
+
+    win_rate = (sum(pnl > 0 for pnl in closed_trade_pnl) / len(closed_trade_pnl) * 100
+                if closed_trade_pnl else None)
+    return {
+        "observations": len(valid_rows),
+        "agent_return_pct": total_return("equity"),
+        "spy_return_pct": total_return("benchmark"),
+        "agent_max_drawdown_pct": max_drawdown("equity"),
+        "spy_max_drawdown_pct": max_drawdown("benchmark"),
+        "closed_trade_count": len(closed_trade_pnl),
+        "closed_trade_win_rate_pct": win_rate,
+    }
+
 @st.cache_data(ttl=300, show_spinner=False)
 def get_option_expirations(symbol):
     return list(yf.Ticker(symbol).options)
@@ -488,6 +561,21 @@ with tab6:
                     if {"date", "equity"}.issubset(history_frame.columns):
                         chart_columns = [column for column in ("equity", "benchmark") if column in history_frame.columns]
                         st.line_chart(history_frame.set_index("date")[chart_columns], height=260)
+                        performance = calculate_paper_performance(history, agent_state.get("trades", []))
+                        strategy_return = performance["agent_return_pct"]
+                        spy_return = performance["spy_return_pct"]
+                        excess_return = strategy_return - spy_return if strategy_return is not None and spy_return is not None else None
+                        drawdown = performance["agent_max_drawdown_pct"]
+                        win_rate = performance["closed_trade_win_rate_pct"]
+                        p1, p2, p3, p4 = st.columns(4)
+                        p1.metric("Strategy return since this version began", f"{strategy_return:+.2f}%" if strategy_return is not None else "Not enough data")
+                        p2.metric("SPY return over same version records", f"{spy_return:+.2f}%" if spy_return is not None else "Not enough data")
+                        p3.metric("Difference vs. SPY", f"{excess_return:+.2f} pp" if excess_return is not None else "Not enough data")
+                        p4.metric("Largest observed drawdown", f"{drawdown:.2f}%" if drawdown is not None else "Not enough data")
+                        if win_rate is None:
+                            st.caption("Closed-trade win rate: not available until the bot completes at least one buy-and-sell round trip.")
+                        else:
+                            st.caption(f"Closed-trade win rate: {win_rate:.1f}% across {performance['closed_trade_count']} completed sell trades. Fees and slippage are not included. These are observed results, not a prediction; drawdown uses recorded daily checkpoints.")
                 if agent_state.get("positions"):
                     st.markdown("**Open paper positions**")
                     st.dataframe(pd.DataFrame(agent_state["positions"]), hide_index=True, use_container_width=True)
