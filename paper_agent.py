@@ -146,7 +146,7 @@ def list_assets(api: Alpaca, asset_class: str) -> list[dict]:
             continue
         symbol = str(asset["symbol"])
         if asset_class == "us_equity":
-            if asset.get("exchange", "").upper() == "OTC" or EXCLUDED_NAME.search(str(asset.get("name", ""))):
+            if str(asset.get("exchange") or "").upper() == "OTC" or EXCLUDED_NAME.search(str(asset.get("name", ""))):
                 continue
             # Exclude malformed and test-like tickers; retain normal share classes.
             if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", symbol):
@@ -247,7 +247,7 @@ def make_candidate(symbol: str, asset_class: str, bars: list[dict]) -> dict | No
     bar_date = str(bars[-1]["t"])[:10]
     return {
         "symbol": symbol, "asset_class": asset_class, "price": last,
-        "stop": stop, "stop_fraction": stop_fraction,
+        "stop": stop, "stop_fraction": stop_fraction, "atr20": atr20,
         "relative_volume": relative_volume, "avg_dollar_volume": avg_dollar_volume,
         "momentum_63d_pct": momentum_63d, "sma50": sma50, "sma200": sma200,
         "prior_20d_high": prior_high, "bar_date": bar_date, "score": score,
@@ -378,7 +378,7 @@ def update_positions(api: Alpaca, state: dict, rows: dict[str, dict]) -> None:
         position["last_price"] = row["price"]
         # ATR-derived trailing reference stop. Orders are submitted only after a
         # completed daily bar; a gap can produce a worse fill than this level.
-        trailing_stop = row["price"] * (1 - float(position.get("stop_fraction", 0.08)))
+        trailing_stop = row["price"] - 2 * float(row.get("atr20", 0))
         position["stop"] = max(float(position["stop"]), trailing_stop)
         if row["price"] <= float(position["stop"]):
             already_exiting = any(
