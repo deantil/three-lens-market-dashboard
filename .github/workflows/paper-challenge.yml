@@ -7,7 +7,7 @@ on:
       - ".github/workflows/paper-challenge.yml"
       - "paper_agent.py"
   schedule:
-    - cron: "7/15 * * * *"
+    - cron: "15 0 * * *"
   workflow_dispatch:
 
 permissions:
@@ -20,7 +20,7 @@ concurrency:
 jobs:
   update-paper-account:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 55
     steps:
       - name: Check out the app
         uses: actions/checkout@v4
