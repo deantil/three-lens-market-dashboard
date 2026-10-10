@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import json
-import math
 import os
 from pathlib import Path
 import re
@@ -123,11 +122,16 @@ class Alpaca:
 
     def data(self, path: str, params: dict) -> dict:
         last_error = None
-        for attempt in range(4):
+        for attempt in range(5):
             response = requests.get(DATA_API + path, headers=self.headers, params=params, timeout=60)
             if response.status_code == 429 or response.status_code >= 500:
                 last_error = requests.HTTPError(f"Market data HTTP {response.status_code}: {response.text[:300]}")
-                time.sleep(min(2 ** attempt, 8))
+                retry_after = response.headers.get("Retry-After")
+                try:
+                    delay = float(retry_after) if retry_after else min(5 * (2 ** attempt), 30)
+                except ValueError:
+                    delay = min(5 * (2 ** attempt), 30)
+                time.sleep(delay)
                 continue
             response.raise_for_status()
             return response.json()
