@@ -1,11 +1,55 @@
 {
   "schema_version": 2,
   "engine": "Alpaca paper trading",
+  "strategy_version": "daily-swing-v1",
   "starting_cash": 100.0,
   "target_balance": 1000.0,
   "cash": 100.0,
   "positions": [],
-  "pending": [],
+  "pending": [
+    {
+      "order_id": "ed325200-a4f4-4e2c-a1b5-f7471bf67672",
+      "client_order_id": "tl100-891515d77a384451b93891ad",
+      "symbol": "PLTR",
+      "asset_class": "stock",
+      "side": "buy",
+      "notional": 8.565048145871758,
+      "qty": null,
+      "price": 209.03,
+      "stop_fraction": 0.05837678802085818,
+      "signal_bar_date": "2026-10-09",
+      "score": 64.91163402948753,
+      "submitted_utc": "2026-10-10T12:14:55.181666+00:00"
+    },
+    {
+      "order_id": "de8a7c5b-7586-4c2d-a86a-52e9daf70399",
+      "client_order_id": "tl100-c32b4de4b21f4348832502e4",
+      "symbol": "VEEV",
+      "asset_class": "stock",
+      "side": "buy",
+      "notional": 9.763836664687648,
+      "qty": null,
+      "price": 296.02,
+      "stop_fraction": 0.05120937774474695,
+      "signal_bar_date": "2026-10-09",
+      "score": 53.51903870196308,
+      "submitted_utc": "2026-10-10T12:14:55.380419+00:00"
+    },
+    {
+      "order_id": "8395f621-0468-4644-9b0b-193f25845d3e",
+      "client_order_id": "tl100-a9490940afa44e95a6505ced",
+      "symbol": "SNOW",
+      "asset_class": "stock",
+      "side": "buy",
+      "notional": 7.141005050407327,
+      "qty": null,
+      "price": 369.04,
+      "stop_fraction": 0.07001815521352694,
+      "signal_bar_date": "2026-10-09",
+      "score": 40.918082823165165,
+      "submitted_utc": "2026-10-10T12:14:55.585568+00:00"
+    }
+  ],
   "trades": [],
   "equity_history": [
     {
@@ -39,11 +83,41 @@
       "cash": 100.0,
       "positions": 0,
       "broker_equity": 300.0
+    },
+    {
+      "date": "2026-10-10T12:14:58.381682+00:00",
+      "equity": 100.0,
+      "benchmark": 100.0,
+      "cash": 100.0,
+      "positions": 0,
+      "broker_equity": 300.0,
+      "strategy_version": "daily-swing-v1"
     }
   ],
-  "last_bar_date": null,
-  "last_run_utc": "2026-10-10T08:40:51.521298+00:00",
+  "last_bar_date": "2026-10-09",
+  "last_run_utc": "2026-10-10T12:14:58.381662+00:00",
+  "last_scan_utc": "2026-10-10T12:14:54.985635+00:00",
+  "scan_summary": {
+    "strategy_version": "daily-swing-v1",
+    "eligible_stocks": 10816,
+    "eligible_crypto": 36,
+    "symbols_with_200d_history": 7999,
+    "qualifying_signals": 4,
+    "stocks_with_bars": 10638,
+    "crypto_with_bars": 36,
+    "latest_completed_bar_date": "2026-10-09",
+    "stock_data_feed": "Alpaca IEX daily bars",
+    "crypto_data_feed": "Alpaca US daily bars",
+    "options_traded": false
+  },
+  "processed_signal_dates": {
+    "PLTR": "2026-10-09",
+    "VEEV": "2026-10-09",
+    "SNOW": "2026-10-09"
+  },
+  "benchmark_shares": 0.12845050159920873,
+  "benchmark_start_price": 778.51,
   "broker_status": "connected_paper",
   "broker_equity": 300.0,
-  "message": "Paper trading only. Bot allocation is capped at $100; no live endpoint is configured."
+  "message": "Paper only. Daily swing rules scan Alpaca-tradable US equities and USD crypto. No live endpoint, options orders, or profit guarantee."
 }
