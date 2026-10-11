@@ -17,12 +17,13 @@ import time
 import uuid
 
 import requests
+import options_research as opt
 
 
 STATE_PATH = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("paper_challenge_state.json")
 STARTING_CASH = 100.0
 TARGET_BALANCE = 1000.0
-STRATEGY_VERSION = "daily-swing-v1"
+STRATEGY_VERSION = "daily-swing-options-v2"
 MAX_POSITIONS = 3
 MAX_POSITION_FRACTION = 0.20
 MAX_RISK_FRACTION = 0.005
@@ -96,6 +97,7 @@ def append_trade(state: dict, action: str, symbol: str, qty: float, price: float
         "date": now().isoformat(), "action": action, "symbol": symbol,
         "shares": round(qty, 9), "price": round(price, 6), "note": note,
         "strategy_version": STRATEGY_VERSION,
+        "multiplier": 100 if re.search(r"\d{6}[CP]\d{8}$", symbol) else 1,
     })
     state["trades"] = state["trades"][-500:]
 
@@ -249,6 +251,8 @@ def make_candidate(symbol: str, asset_class: str, bars: list[dict]) -> dict | No
     # not a probability of winning.
     score = momentum_63d + min(relative_volume, 3.0) * 2.0
     bar_date = str(bars[-1]["t"])[:10]
+    if (now().date() - datetime.fromisoformat(bar_date).date()).days > 4:
+        return None
     return {
         "symbol": symbol, "asset_class": asset_class, "price": last,
         "stop": stop, "stop_fraction": stop_fraction, "atr20": atr20,
@@ -308,45 +312,90 @@ def reconcile_foreign_activity(api: Alpaca, state: dict) -> None:
     actual = {normalized_symbol(p["symbol"]): float(p["qty"]) for p in broker_positions}
     for position in state["positions"]:
         broker_qty = actual.get(normalized_symbol(position["symbol"]), 0.0)
+        if normalized_symbol(position["symbol"]) in pending_symbols:
+            continue  # Partial fills are reconciled below before sizing.
         expected = float(position["qty"])
         if abs(broker_qty - expected) > max(1e-6, expected * 0.02):
             raise RuntimeError(f"Quantity mismatch for {position['symbol']}; trading paused without sending orders.")
 
 
 def filled_order(api: Alpaca, pending: dict) -> dict | None:
-    order = api.trade("GET", f"/orders/{pending['order_id']}")
-    if order.get("status") == "filled":
-        return order
-    if order.get("status") in {"rejected", "canceled", "expired"}:
-        return {**order, "terminal_unfilled": True}
-    return None
+    if pending.get("order_id"):
+        return api.trade("GET", f"/orders/{pending['order_id']}")
+    try:
+        order = api.trade("GET", "/orders:by_client_order_id", params={"client_order_id": pending["client_order_id"]})
+    except requests.HTTPError as error:
+        if error.response is None or error.response.status_code != 404:
+            raise
+        order = api.trade("POST", "/orders", json=pending["request"])
+    pending["order_id"] = order["id"]
+    return order
 
 
 def apply_filled_order(state: dict, pending: dict, order: dict) -> None:
     symbol, side = pending["symbol"], pending["side"]
     qty = float(order.get("filled_qty") or 0)
     price = float(order.get("filled_avg_price") or pending.get("price") or 0)
-    if order.get("terminal_unfilled"):
-        append_trade(state, "CANCELLED", symbol, 0, price, f"Paper order {order.get('status')}; no fill")
+    previous_qty = float(pending.get("accounted_qty", 0))
+    cumulative_value = qty * price
+    delta_qty = qty - previous_qty
+    delta_value = cumulative_value - float(pending.get("accounted_value", 0))
+    if delta_qty <= 0:
         return
+    price = delta_value / delta_qty
+    qty = delta_qty
+    mult = opt.multiplier(pending)
     if side == "buy" and qty > 0 and price > 0:
-        cost = qty * price
+        cost = delta_value * mult
         if cost > float(state["cash"]) + 0.02:
             raise RuntimeError("Paper fill exceeded the $100 strategy ledger; trading paused.")
         state["cash"] = max(0.0, float(state["cash"]) - cost)
         stop_fraction = float(pending.get("stop_fraction", 0.08))
-        state["positions"].append({
+        position = next((p for p in state["positions"] if p["symbol"] == symbol), None)
+        if position:
+            total_qty = float(position["qty"]) + qty
+            position["entry_price"] = (float(position["entry_price"]) * float(position["qty"]) + delta_value) / total_qty
+            position["qty"] = total_qty
+        else:
+            state["positions"].append({
             "symbol": symbol, "asset_class": pending["asset_class"], "qty": qty,
             "entry_price": price, "last_price": price,
             "stop": price * (1 - stop_fraction), "stop_fraction": stop_fraction,
             "entry_order_id": order["id"], "entry_date": now().date().isoformat(),
             "strategy_version": STRATEGY_VERSION,
-        })
+            "multiplier": mult, "expiration_date": pending.get("expiration_date"),
+            "underlying": pending.get("underlying"),
+            })
         append_trade(state, "BUY", symbol, qty, price, "Filled by Alpaca paper trading")
     elif side == "sell" and qty > 0 and price > 0:
-        state["cash"] = float(state["cash"]) + qty * price
-        state["positions"] = [p for p in state["positions"] if p["symbol"] != symbol]
+        state["cash"] = float(state["cash"]) + delta_value * mult
+        for position in state["positions"]:
+            if position["symbol"] == symbol:
+                position["qty"] = max(0, float(position["qty"]) - qty)
+        state["positions"] = [p for p in state["positions"] if float(p["qty"]) > 1e-9]
         append_trade(state, "SELL", symbol, qty, price, "Exit filled by Alpaca paper trading")
+    pending["accounted_qty"] = float(order.get("filled_qty") or 0)
+    pending["accounted_value"] = cumulative_value
+
+
+def reconcile_pending(api, state):
+    remaining = []
+    for pending in state["pending"]:
+        order = filled_order(api, pending)
+        apply_filled_order(state, pending, order)
+        if order.get("status") not in {"filled", "canceled", "expired", "rejected"}:
+            remaining.append(pending)
+    state["pending"] = remaining
+    save_state(state)
+
+
+def reserved_cash(state):
+    return sum(max(0, float(p.get("notional", 0)) - float(p.get("accounted_value", 0)) * opt.multiplier(p))
+               for p in state["pending"] if p["side"] == "buy")
+
+
+def invested_value(state):
+    return sum(float(p["qty"]) * float(p["last_price"]) * opt.multiplier(p) for p in state["positions"])
 
 
 def send_order(api: Alpaca, state: dict, row: dict, side: str,
@@ -356,26 +405,53 @@ def send_order(api: Alpaca, state: dict, row: dict, side: str,
     client_id = BOT_PREFIX + uuid.uuid4().hex[:24]
     body = {
         "symbol": symbol, "side": side, "type": "market",
-        "time_in_force": "day" if asset_class == "stock" else "gtc",
+        "time_in_force": "gtc" if asset_class == "crypto" else "day",
         "client_order_id": client_id,
     }
-    if qty is None:
+    if asset_class == "option":
+        if qty is None or qty < 1 or qty != int(qty):
+            raise ValueError("Options require positive whole-contract quantities")
+        body.update(type="limit", qty=str(int(qty)), limit_price=f"{row['price']:.2f}",
+                    position_intent="buy_to_open" if side == "buy" else "sell_to_close")
+        if side == "buy":
+            notional = float(body["limit_price"]) * int(qty) * 100
+            if notional > min(float(state["cash"]) - reserved_cash(state),
+                              (float(state["cash"]) + invested_value(state)) * opt.MAX_PREMIUM_FRACTION) + 1e-8:
+                raise ValueError("Option limit price exceeds the strategy premium budget")
+    elif qty is None:
         body["notional"] = f"{notional:.2f}"
     else:
         body["qty"] = f"{qty:.9f}".rstrip("0").rstrip(".")
-    order = api.trade("POST", "/orders", json=body)
-    state["pending"].append({
-        "order_id": order["id"], "client_order_id": client_id, "symbol": symbol,
+    pending = {
+        "order_id": None, "client_order_id": client_id, "symbol": symbol,
         "asset_class": asset_class, "side": side, "notional": notional,
         "qty": qty, "price": row.get("price", 0),
         "stop_fraction": row.get("stop_fraction", 0),
         "signal_bar_date": row.get("bar_date"), "score": row.get("score"),
         "submitted_utc": now().isoformat(),
-    })
+        "request": body, "multiplier": opt.multiplier(row),
+        "expiration_date": row.get("expiration_date"), "underlying": row.get("underlying"),
+    }
+    state["pending"].append(pending)
+    save_state(state)  # Persist intent before the broker call; retry by unique client ID.
+    order = api.trade("POST", "/orders", json=body)
+    pending["order_id"] = order["id"]
+    save_state(state)
 
 
 def update_positions(api: Alpaca, state: dict, rows: dict[str, dict]) -> None:
     for position in list(state["positions"]):
+        if position["asset_class"] == "option":
+            quote = opt.position_quote(api, position["symbol"], now())
+            if not quote["valid"]:
+                state.setdefault("options_warnings", []).append(f"No executable quote for {position['symbol']}; exit may be delayed")
+                continue
+            position["last_price"] = quote["bid"]
+            expiry = datetime.fromisoformat(position["expiration_date"]).date()
+            exit_due = (expiry - now().date()).days <= opt.EXIT_DAYS or quote["bid"] <= float(position["entry_price"]) * 0.50
+            if exit_due and not any(p["symbol"] == position["symbol"] for p in state["pending"]):
+                send_order(api, state, {**position, "price": quote["bid"]}, "sell", qty=float(position["qty"]))
+            continue
         row = rows.get(position["symbol"])
         if not row:
             continue
@@ -409,33 +485,62 @@ def run() -> None:
         if account.get("status") != "ACTIVE" or account.get("trading_blocked"):
             raise RuntimeError("Alpaca paper account is not active for trading.")
         reconcile_foreign_activity(api, state)
+        reconcile_pending(api, state)
+        reconcile_foreign_activity(api, state)
 
         # Reconcile broker-confirmed fills before sizing any new paper orders.
-        remaining = []
-        for pending in state["pending"]:
-            result = filled_order(api, pending)
-            if result is None:
-                remaining.append(pending)
-            else:
-                apply_filled_order(state, pending, result)
-        state["pending"] = remaining
-
-        candidates, summary, rows = bar_candidates(api)
+        options_only = "--options-only" in sys.argv
+        if options_only:
+            bars = fetch_bars(api, "us_equity", [{"symbol": s} for s in opt.UNDERLYINGS])
+            rows = {s: r for s, b in bars.items() if (r := make_candidate(s, "stock", b))}
+            candidates, summary = [], state.get("scan_summary", {})
+        else:
+            candidates, summary, rows = bar_candidates(api)
         state["scan_summary"] = summary
+        summary["options_enabled"] = True
         state["last_scan_utc"] = now().isoformat()
-        state["last_bar_date"] = summary["latest_completed_bar_date"]
-        update_positions(api, state, rows)
+        state["last_bar_date"] = summary.get("latest_completed_bar_date")
+        clock = api.trade("GET", "/clock")
+        state["options_warnings"] = []
+        if not options_only or clock.get("is_open"):
+            update_positions(api, state, rows)
 
         owned = {p["symbol"] for p in state["positions"]}
         owned.update(p["symbol"] for p in state["pending"] if p["side"] == "buy")
-        reserved = sum(float(p.get("notional", 0)) for p in state["pending"] if p["side"] == "buy")
-        slots = MAX_POSITIONS - len(state["positions"]) - sum(
-            1 for p in state["pending"] if p["side"] == "buy"
-        )
-        invested = sum(float(p["qty"]) * float(p["last_price"]) for p in state["positions"])
+        reserved = reserved_cash(state)
+        slots = MAX_POSITIONS - len(owned)
+        invested = invested_value(state)
         equity = float(state["cash"]) + invested
         processed = state.setdefault("processed_signal_dates", {})
+        option_rows, option_summary = opt.scan(api, rows, now(), equity, max(0, float(state["cash"]) - reserved))
+        state["options_research"] = {"as_of": now().isoformat(), "summary": option_summary, "candidates": option_rows[:40]}
+        research_dir = Path("research")
+        research_dir.mkdir(exist_ok=True)
+        observed = now().isoformat()
+        with (research_dir / f"quotes-{now().date().isoformat()}.jsonl").open("a", encoding="utf-8") as archive:
+            for row in option_rows[:200]:
+                archive.write(json.dumps({**row, "observed_at": observed, "market_open": bool(clock.get("is_open"))}) + "\n")
+        close_time = datetime.fromisoformat(clock["next_close"]) if clock.get("next_close") else now()
+        halted = Path("STOP").exists() or bool(state.get("halt_new_entries"))
+        if options_only and not halted and int(account.get("options_trading_level") or 0) >= 2 and clock.get("is_open") and (close_time - now()).total_seconds() > 3600 and slots > 0:
+            for row in option_rows:
+                signal_key = "option:" + row["underlying"]
+                if not row["eligible"] or row["symbol"] in owned or row["bar_date"] <= processed.get(signal_key, ""):
+                    continue
+                if any(p.get("asset_class") == "option" for p in state["positions"] + state["pending"]):
+                    break  # At most one option position or entry order.
+                quote = opt.position_quote(api, row["symbol"], now())
+                if not quote["valid"] or quote["ask"] * 100 > min(equity * opt.MAX_PREMIUM_FRACTION, float(state["cash"]) - reserved):
+                    continue
+                row = {**row, "price": quote["ask"], "premium_usd": quote["ask"] * 100}
+                processed[signal_key] = row["bar_date"]
+                send_order(api, state, row, "buy", notional=row["premium_usd"], qty=1)
+                reserved += row["premium_usd"]
+                slots -= 1
+                break
         for row in candidates:
+            if halted:
+                break
             if slots <= 0:
                 break
             symbol = row["symbol"]
@@ -448,8 +553,8 @@ def run() -> None:
             budget = min(risk_based_notional, allocation_cap, max(0.0, float(state["cash"]) - reserved))
             if budget < 1.0:
                 continue
-            send_order(api, state, row, "buy", notional=budget)
             processed[symbol] = row["bar_date"]
+            send_order(api, state, row, "buy", notional=budget)
             owned.add(symbol)
             reserved += budget
             slots -= 1
@@ -457,21 +562,15 @@ def run() -> None:
         # Give paper market orders a brief chance to fill; queued stock orders
         # remain pending until the next eligible US session.
         time.sleep(2)
-        remaining = []
-        for pending in state["pending"]:
-            result = filled_order(api, pending)
-            if result is None:
-                remaining.append(pending)
-            else:
-                apply_filled_order(state, pending, result)
-        state["pending"] = remaining
+        reconcile_pending(api, state)
 
         broker_positions = api.trade("GET", "/positions")
         owned_symbols = {normalized_symbol(p["symbol"]) for p in state["positions"]}
+        owned_symbols.update(normalized_symbol(p["symbol"]) for p in state["pending"])
         if any(normalized_symbol(p["symbol"]) not in owned_symbols for p in broker_positions):
             raise RuntimeError("Unexpected paper position detected after order processing; trading paused.")
 
-        invested = sum(float(p["qty"]) * float(p["last_price"]) for p in state["positions"])
+        invested = invested_value(state)
         virtual_equity = float(state["cash"]) + invested
         spy = rows.get("SPY")
         if spy and float(spy["price"]) > 0:
@@ -480,7 +579,7 @@ def run() -> None:
                 state["benchmark_shares"] = STARTING_CASH / spy["price"]
             benchmark = float(state["benchmark_shares"]) * float(spy["price"])
         else:
-            benchmark = float(state.get("equity_history", [{}])[-1].get("benchmark", STARTING_CASH))
+            benchmark = float((state.get("equity_history") or [{}])[-1].get("benchmark", STARTING_CASH))
 
         state["broker_status"] = "connected_paper"
         state["broker_equity"] = float(account.get("equity", STARTING_CASH))
@@ -488,7 +587,7 @@ def run() -> None:
         state["strategy_version"] = STRATEGY_VERSION
         state["message"] = (
             "Paper only. Daily swing rules scan Alpaca-tradable US equities and USD crypto. "
-            "No live endpoint, options orders, or profit guarantee."
+            "Options research and small long-call paper orders share the same ledger. No live endpoint or profit guarantee."
         )
         state["equity_history"].append({
             "date": now().isoformat(), "equity": round(virtual_equity, 6),
@@ -500,8 +599,8 @@ def run() -> None:
         save_state(state)
         print(
             f"Paper run complete: ${virtual_equity:.2f}; {len(state['positions'])} positions; "
-            f"{summary['eligible_stocks']} eligible stocks, {summary['eligible_crypto']} crypto assets, "
-            f"{summary['qualifying_signals']} daily swing signals."
+            f"{summary.get('eligible_stocks', 0)} eligible stocks, {summary.get('eligible_crypto', 0)} crypto assets, "
+            f"{summary.get('qualifying_signals', 0)} daily swing signals."
         )
     except Exception as error:
         state["broker_status"] = "paused_safety_check" if any(
@@ -515,4 +614,5 @@ def run() -> None:
 
 if __name__ == "__main__":
     run()
+
 

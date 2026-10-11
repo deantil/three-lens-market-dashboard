@@ -26,7 +26,7 @@ A candidate must meet **all** of these rules:
 
 Passing candidates are ranked by 63-session momentum plus a capped relative-volume bonus. That ranking is not a probability of winning. The bot can hold at most three positions, limits each position to 20% of its strategy equity, and sizes it so planned loss to the reference stop is at most 0.5% of current strategy equity. Stops are checked after completed daily bars; gaps can make losses larger. Stock market orders submitted after the close queue for the next eligible session. Crypto orders can execute any time.
 
-The paper report records the strategy version, universe/data counts, open positions, trade history, and an SPY buy-and-hold benchmark starting with $100 on the first run of this version. Results are too small and too recent to establish that the rules work. Changes should be compared with the benchmark and risk statistics before promoting a new rule version. Options are not part of this bot: with $100, one indivisible contract can consume the whole strategy budget and lose its full premium.
+The report records strategy version, universe/data counts, positions, orders and an SPY benchmark. Upgrades preserve existing cash, holdings, pending orders and benchmark. Options now share this ledger under the safeguards below; crypto is retained. Small samples cannot establish that a strategy works.
 
 ## Connect the Alpaca paper account
 
@@ -35,7 +35,29 @@ The paper report records the strategy version, universe/data counts, open positi
 3. Add `CHATGPT_APCA_API_KEY_ID` and `CHATGPT_APCA_API_SECRET_KEY`. Paste the paper key and secret into GitHub's secret fields; never commit them or paste them into chat.
 4. Open **Actions → $100 Alpaca paper challenge → Run workflow**. A green run and `Broker: connected_paper` in the dashboard confirm the connection.
 
-The bot pauses when it sees unrecognized open orders or holdings in the same Alpaca account. This prevents it from changing another bot's trades. Use a separate Alpaca paper account from Claude's bot. This workflow reads only the `CHATGPT_...` GitHub secrets, so its credentials do not replace Claude's. The bot still cannot scan assets that Alpaca does not list as tradable, assets with insufficient history, or options contracts.
+The bot pauses on unrecognized broker orders/holdings. It uses only `CHATGPT_...` GitHub secrets and a separate paper account from Claude. Existing credentials remain configured. Order intents are saved before submission, recovered by unique client IDs, and cumulative partial fills applied once. Failure to restore the ledger aborts the workflow rather than resetting $100.
+
+## Options research and paper trading
+
+`daily-swing-options-v2` inspects Alpaca chains and contract metadata for SPY, QQQ, IWM, AAPL, MSFT, AMD, PLTR and up to five qualified stock signals. Calls and puts expiring in 14–45 calendar days are researched. Only **long calls on qualifying daily stock breakouts** may trade; puts stay research-only. No short options, covered calls, cash-secured puts or spreads are introduced.
+
+One standard whole contract at a time shares the three-position limit and existing cash with stocks/crypto. The entire premium must fit **5% of current strategy equity** ($5 initially), a separate experimental risk cap from the stock/crypto 0.5% planned stop risk. A contract can lose its entire premium. No affordable contract is a likely, valid result; the budget is never increased to force a trade. No stock is sold solely to create an options slot.
+
+Entry requires broker options level 2, an open market with at least an hour before close, actual OPRA quotes at most 60 seconds old, positive uncrossed bid/ask, size at least one, spread at most 15% of ask, recent open interest at least 100, and call delta 0.25–0.65. Indicative quotes are research-only. Restricted data is reported; the bot does not buy a subscription. Whole-contract day limit orders specify buy-to-open or sell-to-close.
+
+Exits are attempted at a 50% premium loss or five calendar days before expiry. Unfilled limits, gaps, unavailable quotes and skipped GitHub runs can delay exits. The bot never requests exercise; broker automatic exercise can still occur at expiry if an exit fails. Unexpected exercise/assignment holdings pause the agent. Monitor warnings and pending exits. Add `STOP` on main or set `halt_new_entries: true` in the paper-state ledger to stop new entries while permitting exits.
+
+Full stock/crypto scans run daily at 00:15 UTC. Options checks run weekdays at 14:45, 16:45, 18:45 and 20:00 UTC; broker clock checks handle holidays, early closes and DST. This is periodic automation, not continuous protection.
+
+## Realistic backtests and weekly reviews
+
+`Weekly paper strategy review` runs Saturdays at 15:00 UTC, or manually. It publishes `research/review.md` and `research/review.json` on `paper-state`, workflow summaries and 90-day artifacts. Trading/review workflows share one concurrency group. No rules change automatically.
+
+- Stocks: a frozen SPY/QQQ/IWM/DIA ETF universe, two years divided into development and holdout periods, at least 200 preceding daily bars for warmup. The deployed signal sees only each historical prefix; entries and close-triggered exits fill at the next open, including gaps. Fractional sizing shares $100 cash and three slots. Base costs use 0.1% slippage per side; stress costs use 0.3% and $0.01 per order. Final open holdings are conservatively liquidated for equity reporting; open counts remain visible. SPY uses matching periods and slippage.
+- Options: up to 200 inspected contracts per run are archived with quote time, sizes, bid/ask, feed and eligibility. Replay uses actual OPRA snapshots, another observation for entry/exit limit fills, the 100x multiplier and a $0.65 per-contract per-side cost stress assumption. It tests a separate $5 sleeve, not the combined stock/crypto ledger. Missing exits cost full premium. No same-snapshot fill, indicative quote or synthetic premium can produce claimed performance. Early reports show insufficient data.
+- Limits: the ETF subset does not validate the full market or crypto. IEX covers part of the market; dividends are excluded from both strategy and benchmark. Current ETF selection is subjective and the historical holdout is not a blind prospective test. Sparse options snapshots cannot establish continuous execution or remove contract-selection bias. Coverage and exit counts are reported. Crypto backtesting remains unimplemented and its paper strategy unvalidated.
+
+Run `python -m unittest discover -s tests -v` for offline safeguard tests. Run `python research_backtest.py --state paper_challenge_state.json` for a credential-backed historical review; it sends no orders. See [Alpaca options trading](https://docs.alpaca.markets/us/docs/options-trading) and [historical data/feed limitations](https://docs.alpaca.markets/us/docs/historical-option-data); historical options data starts in February 2024.
 
 ## Deployment and free-host limits
 
@@ -47,6 +69,7 @@ The scanner is currently for US-listed stocks and daily price bars. To support a
 
 ## Risk notes
 
-A standard equity option contract generally represents 100 shares. The $100 challenge does not trade options. Review the [OCC options disclosure](https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document) before using options.
+A standard equity option contract generally represents 100 shares. The challenge allows only the limited long-call paper entries above. Review the [OCC options disclosure](https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document) before using options.
 
 The $1,000 target is a challenge goal for paper tracking, not a forecast. Past or simulated results do not guarantee future outcomes.
+
