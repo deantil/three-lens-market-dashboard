@@ -1,5 +1,8 @@
 name: Weekly paper strategy review
 on:
+  push:
+    branches: [main]
+    paths: ['research_backtest.py', 'tests/**', '.github/workflows/research-review.yml']
   schedule:
     - cron: '0 15 * * 6'
   workflow_dispatch:

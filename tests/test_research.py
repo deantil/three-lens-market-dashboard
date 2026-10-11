@@ -195,6 +195,22 @@ class BacktestTests(unittest.TestCase):
             valid, _, _ = options.quote_check({'bp': bid, 'ap': ask, 't': stamp.isoformat(), 'bs': 10, 'as': 10}, clock)
             self.assertFalse(valid)
 
+    def test_scan_obeys_full_premium_and_delta(self):
+        clock = datetime(2026, 10, 12, 15, tzinfo=timezone.utc)
+        class Broker:
+            def data(inner, path, params):
+                return {'snapshots': {'SPY261106C00800000': {'latestQuote': {'bp': .037, 'ap': .04, 't': clock.isoformat(), 'bs': 1, 'as': 1},
+                                                             'greeks': {'delta': .30}}}}
+            def trade(inner, method, path, **kwargs):
+                return {'option_contracts': [{'symbol': 'SPY261106C00800000', 'tradable': True, 'size': '100', 'type': 'call',
+                                             'expiration_date': '2026-11-06', 'open_interest': '100', 'open_interest_date': '2026-10-12'}]}
+        with patch.object(options, 'UNDERLYINGS', ('SPY',)):
+            rows, summary = options.scan(Broker(), {'SPY': {'signal': True, 'bar_date': '2026-10-09'}}, clock, 100, 100)
+            self.assertTrue(rows[0]['eligible'])
+            self.assertEqual(rows[0]['premium_usd'], 4)
+            rows, _ = options.scan(Broker(), {'SPY': {'signal': True}}, clock, 50, 100)
+            self.assertFalse(rows[0]['eligible'])
+
     def test_paper_endpoint_and_dedicated_credentials(self):
         self.assertEqual(agent.TRADE_API, 'https://paper-api.alpaca.markets/v2')
         with patch.dict('os.environ', {'CHATGPT_APCA_API_KEY_ID': 'test', 'CHATGPT_APCA_API_SECRET_KEY': 'secret', 'ALPACA_KEY': 'claude'}):

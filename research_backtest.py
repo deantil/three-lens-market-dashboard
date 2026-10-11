@@ -114,6 +114,7 @@ def option_replay(rows, fee=0.65, min_delay=60):
     from options_research import quote_check
     cash, position, pending, pending_exit, curve, trades, skipped = 100.0, None, None, None, [100.0], 0, 0
     exit_records = []
+    processed = set()
     for row in sorted(rows, key=lambda r: r["observed_at"]):
         observed = datetime.fromisoformat(row["observed_at"])
         if row.get("feed") != "opra":
@@ -143,8 +144,10 @@ def option_replay(rows, fee=0.65, min_delay=60):
             elif bid * 100 <= position["premium"] * .50 or (position["expiry"] - observed.date()).days <= 5:
                 pending_exit = {"time": observed, "limit": bid}
         if not position and not pending and row.get("eligible") and row.get("market_open"):
-            if ask * 100 + fee <= min(cash, 5):
+            key = (row.get("underlying", row["symbol"]), row.get("bar_date", observed.date().isoformat()))
+            if key not in processed and ask * 100 + fee <= min(cash, 5):
                 pending = {"symbol": row["symbol"], "limit": ask, "time": observed}
+                processed.add(key)
         curve.append(cash + (position["premium"] if position else 0))
     missing_exit = bool(position)
     if position:
