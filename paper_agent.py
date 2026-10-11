@@ -19,6 +19,7 @@ import uuid
 import requests
 import options_research as opt
 import manual_replication
+import trade_alerts
 
 
 STATE_PATH = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("paper_challenge_state.json")
@@ -423,6 +424,9 @@ def send_order(api: Alpaca, state: dict, row: dict, side: str,
         body["notional"] = f"{notional:.2f}"
     else:
         body["qty"] = f"{qty:.9f}".rstrip("0").rstrip(".")
+    allowed, proposal_id = trade_alerts.gate(state, body, row, save_state, now())
+    if not allowed:
+        return False
     pending = {
         "order_id": None, "client_order_id": client_id, "symbol": symbol,
         "asset_class": asset_class, "side": side, "notional": notional,
@@ -432,12 +436,16 @@ def send_order(api: Alpaca, state: dict, row: dict, side: str,
         "submitted_utc": now().isoformat(),
         "request": body, "multiplier": opt.multiplier(row),
         "expiration_date": row.get("expiration_date"), "underlying": row.get("underlying"),
+        "alert_proposal_id": proposal_id,
     }
+    state['trade_proposals'][proposal_id]['consumed'] = True
+    state['trade_proposals'][proposal_id]['status'] = 'order_intent_recorded'
     state["pending"].append(pending)
     save_state(state)  # Persist intent before the broker call; retry by unique client ID.
     order = api.trade("POST", "/orders", json=body)
     pending["order_id"] = order["id"]
     save_state(state)
+    return True
 
 
 def update_positions(api: Alpaca, state: dict, rows: dict[str, dict]) -> None:
@@ -483,11 +491,27 @@ def run() -> None:
     api = Alpaca(key, secret)
     try:
         account = api.trade("GET", "/account")
+        if not all(os.getenv(k, '').strip() for k in ('EMAIL_TO', 'SMTP_USER', 'SMTP_PASS')):
+            state['email_alert_status'] = 'not_configured: EMAIL_TO, SMTP_USER and SMTP_PASS required'
         if account.get("status") != "ACTIVE" or account.get("trading_blocked"):
             raise RuntimeError("Alpaca paper account is not active for trading.")
         reconcile_foreign_activity(api, state)
+        # Cancel only this ledger's old open orders, which predate email approval.
+        # Broker-confirmed partial fills remain accounted for below.
+        for pending in state['pending']:
+            if not pending.get('alert_proposal_id'):
+                if not pending.get('order_id'):
+                    raise RuntimeError('Unalerted uncertain order intent; manual broker reconciliation required')
+                order = api.trade('GET', f"/orders/{pending['order_id']}")
+                if order.get('status') not in {'filled', 'canceled', 'expired', 'rejected', 'pending_cancel'}:
+                    api.trade('DELETE', f"/orders/{pending['order_id']}")
+                    state.setdefault('alert_migration', []).append({'symbol': pending['symbol'], 'action': 'cancel_requested', 'time': now().isoformat()})
         reconcile_pending(api, state)
         reconcile_foreign_activity(api, state)
+        approval_id = os.getenv('APPROVE_PROPOSAL_ID', '').strip()
+        if approval_id:
+            trade_alerts.approve(state, approval_id, now())
+            save_state(state)
 
         # Reconcile broker-confirmed fills before sizing any new paper orders.
         options_only = "--options-only" in sys.argv
@@ -523,7 +547,7 @@ def run() -> None:
                 archive.write(json.dumps({**row, "observed_at": observed, "market_open": bool(clock.get("is_open"))}) + "\n")
         close_time = datetime.fromisoformat(clock["next_close"]) if clock.get("next_close") else now()
         halted = Path("STOP").exists() or bool(state.get("halt_new_entries"))
-        if options_only and not halted and int(account.get("options_trading_level") or 0) >= 2 and clock.get("is_open") and (close_time - now()).total_seconds() > 3600 and slots > 0:
+        if (options_only or approval_id) and not halted and int(account.get("options_trading_level") or 0) >= 2 and clock.get("is_open") and (close_time - now()).total_seconds() > 3600 and slots > 0:
             for row in option_rows:
                 signal_key = "option:" + row["underlying"]
                 if not row["eligible"] or row["symbol"] in owned or row["bar_date"] <= processed.get(signal_key, ""):
@@ -534,8 +558,9 @@ def run() -> None:
                 if not quote["valid"] or quote["ask"] * 100 > min(equity * opt.MAX_PREMIUM_FRACTION, float(state["cash"]) - reserved):
                     continue
                 row = {**row, "price": quote["ask"], "premium_usd": quote["ask"] * 100}
+                if not send_order(api, state, row, "buy", notional=row["premium_usd"], qty=1):
+                    break
                 processed[signal_key] = row["bar_date"]
-                send_order(api, state, row, "buy", notional=row["premium_usd"], qty=1)
                 reserved += row["premium_usd"]
                 slots -= 1
                 break
@@ -554,8 +579,9 @@ def run() -> None:
             budget = min(risk_based_notional, allocation_cap, max(0.0, float(state["cash"]) - reserved))
             if budget < 1.0:
                 continue
+            if not send_order(api, state, row, "buy", notional=budget):
+                continue
             processed[symbol] = row["bar_date"]
-            send_order(api, state, row, "buy", notional=budget)
             owned.add(symbol)
             reserved += budget
             slots -= 1

@@ -541,6 +541,11 @@ with tab6:
             agent_state = get_paper_state()
             history = agent_state.get("equity_history", [])
             st.caption(f"Broker: {agent_state.get('broker_status', 'unknown')} · {agent_state.get('message', '')}")
+            st.markdown('**Email alerts and paper-order approval**')
+            st.caption(f"Email status: {agent_state.get('email_alert_status', 'not configured or tested')}. No new order is submitted until SMTP accepts its proposal and you approve the exact order through GitHub Actions. Inbox delivery is not guaranteed; verify your setup test.")
+            proposals = list(agent_state.get('trade_proposals', {}).values())
+            if proposals:
+                st.dataframe(pd.DataFrame(proposals[-30:]), hide_index=True, use_container_width=True)
             st.markdown("**Manual replication in thinkorswim paperMoney**")
             st.caption("All asset classes are listed. Confirm symbol and order support in your own paperMoney account. Direct spot-crypto trades are not an exact match; ETF/futures substitutes are different trades. Manual fills can differ. Alpaca remains the only automated paper engine.")
             copy_tickets = manual_replication.tickets(agent_state)
