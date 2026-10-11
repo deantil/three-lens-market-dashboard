@@ -20,6 +20,7 @@ except ImportError:
 import paper_agent as agent
 import options_research as options
 import research_backtest as replay
+import manual_replication
 
 
 class LedgerTests(unittest.TestCase):
@@ -149,6 +150,20 @@ class LedgerTests(unittest.TestCase):
 
 
 class BacktestTests(unittest.TestCase):
+    def test_manual_ticket_retains_crypto_without_fake_proxy(self):
+        state = {'pending': [{'symbol': 'BTC/USD', 'asset_class': 'crypto', 'side': 'buy', 'notional': 5}]}
+        ticket = manual_replication.tickets(state)[0]
+        self.assertEqual(ticket['symbol'], 'BTC/USD')
+        self.assertEqual(ticket['thinkorswim_status'], 'NOT AN EXACT SPOT-CRYPTO MATCH')
+
+    def test_manual_option_contract_is_unambiguous(self):
+        ticket = manual_replication.tickets({'pending': [{'symbol': 'SPY261120C00800000', 'asset_class': 'option',
+                                                         'side': 'buy', 'qty': 1, 'notional': 5,
+                                                         'request': {'type': 'limit', 'limit_price': '0.05'}}]})[0]
+        self.assertEqual((ticket['underlying'], ticket['expiration'], ticket['strike'], ticket['option_type']),
+                         ('SPY', '2026-11-20', 800, 'CALL'))
+        self.assertEqual(ticket['order_type'], 'LIMIT')
+
     def test_stock_fill_is_next_open_with_gap_and_cost(self):
         data = {'X': [{'t': '2026-01-01T00:00:00Z', 'o': 10, 'c': 10, 'v': 100},
                       {'t': '2026-01-02T00:00:00Z', 'o': 20, 'c': 20, 'v': 100}]}

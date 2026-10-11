@@ -18,6 +18,7 @@ import uuid
 
 import requests
 import options_research as opt
+import manual_replication
 
 
 STATE_PATH = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("paper_challenge_state.json")
@@ -585,6 +586,11 @@ def run() -> None:
         state["broker_equity"] = float(account.get("equity", STARTING_CASH))
         state["last_run_utc"] = now().isoformat()
         state["strategy_version"] = STRATEGY_VERSION
+        state["manual_replication"] = {
+            "as_of": now().isoformat(), "destination": "thinkorswim paperMoney; manual only",
+            "tickets": manual_replication.tickets(state), "holdings": manual_replication.holdings(state),
+            "limitation": "All asset classes are tracked. Exact spot-crypto replication is unavailable; no automatic ETF/futures substitution. Broker eligibility and identical fills cannot be guaranteed.",
+        }
         state["message"] = (
             "Paper only. Daily swing rules scan Alpaca-tradable US equities and USD crypto. "
             "Options research and small long-call paper orders share the same ledger. No live endpoint or profit guarantee."

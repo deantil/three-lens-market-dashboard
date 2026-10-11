@@ -49,6 +49,14 @@ Exits are attempted at a 50% premium loss or five calendar days before expiry. U
 
 Full stock/crypto scans run daily at 00:15 UTC. Options checks run weekdays at 14:45, 16:45, 18:45 and 20:00 UTC; broker clock checks handle holidays, early closes and DST. This is periodic automation, not continuous protection.
 
+## Manual replication in thinkorswim paperMoney
+
+Alpaca remains the paper engine. The dashboard lists **all** pending stock, option and crypto tickets and offers a CSV download. Stock tickets retain the dollar allocation, MARKET/DAY order, symbol and daily reference exit rule. Option tickets include underlying, expiration, strike, call/put, contracts, limit and open/close intent. Confirm the matching symbol/contract and order availability in your own paperMoney account, check remaining rather than already-filled quantities, and do not duplicate a ticket you already copied. These tickets neither connect to Schwab nor send orders there.
+
+Thinkorswim documents dollar-based fractional orders on eligible equities/ETFs; fractional notional orders require MARKET and actual quantities/fills can differ. See [official notional-order instructions](https://toslc.thinkorswim.com/center/howToTos/thinkManual/Trade/Order-Entry-Tools/Order-Types/Notional). PaperMoney support must be checked in the user's account; platform documentation is not a per-account availability guarantee.
+
+Direct spot crypto is marked **not an exact thinkorswim match**. Keep those trades on Alpaca paper; no automatic futures/ETF proxy is introduced. [Schwab's crypto page](https://www.schwab.com/cryptocurrency) currently describes direct crypto as coming soon and lists ETPs/futures exposure. Thus exact replication of every Alpaca crypto trade cannot be guaranteed. Trading everything on Alpaca and maintaining a manual comparison report is supported; identical executions across platforms are not.
+
 ## Realistic backtests and weekly reviews
 
 `Weekly paper strategy review` runs Saturdays at 15:00 UTC, or manually. It publishes `research/review.md` and `research/review.json` on `paper-state`, workflow summaries and 90-day artifacts. Trading/review workflows share one concurrency group. No rules change automatically.

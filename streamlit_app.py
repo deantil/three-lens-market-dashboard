@@ -8,6 +8,7 @@ import requests
 import pandas as pd
 import streamlit as st
 import yfinance as yf
+import manual_replication
 
 st.set_page_config(page_title="Three Lens Market Dashboard", page_icon="📈", layout="wide")
 
@@ -540,6 +541,19 @@ with tab6:
             agent_state = get_paper_state()
             history = agent_state.get("equity_history", [])
             st.caption(f"Broker: {agent_state.get('broker_status', 'unknown')} · {agent_state.get('message', '')}")
+            st.markdown("**Manual replication in thinkorswim paperMoney**")
+            st.caption("All asset classes are listed. Confirm symbol and order support in your own paperMoney account. Direct spot-crypto trades are not an exact match; ETF/futures substitutes are different trades. Manual fills can differ. Alpaca remains the only automated paper engine.")
+            copy_tickets = manual_replication.tickets(agent_state)
+            if copy_tickets:
+                copy_frame = pd.DataFrame(copy_tickets)
+                st.dataframe(copy_frame, hide_index=True, use_container_width=True)
+                st.download_button("Download manual paper trade tickets", copy_frame.to_csv(index=False), "manual_paper_tickets.csv", "text/csv")
+            else:
+                st.info("No pending Alpaca tickets to review for manual replication.")
+            copy_holdings = manual_replication.holdings(agent_state)
+            if copy_holdings:
+                st.dataframe(pd.DataFrame(copy_holdings), hide_index=True, use_container_width=True)
+            st.markdown("[Thinkorswim dollar-based fractional orders](https://toslc.thinkorswim.com/center/howToTos/thinkManual/Trade/Order-Entry-Tools/Order-Types/Notional) · [Schwab crypto availability](https://www.schwab.com/cryptocurrency)")
             research = agent_state.get("options_research", {})
             if research:
                 option_summary = research.get("summary", {})
