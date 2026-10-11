@@ -21,16 +21,23 @@ import paper_agent as agent
 import options_research as options
 import research_backtest as replay
 import manual_replication
+import trade_alerts
 
 
 class LedgerTests(unittest.TestCase):
     def setUp(self):
+        def allowed(state, *args):
+            state.setdefault('trade_proposals', {})['test'] = {}
+            return True, 'test'
+        self.alert_patch = patch.object(trade_alerts, 'gate', side_effect=allowed)
+        self.alert_patch.start()
         self.directory = tempfile.TemporaryDirectory(dir=Path(__file__).parent)
         self.old_path = agent.STATE_PATH
         agent.STATE_PATH = Path(self.directory.name) / 'state.json'
         self.state = agent.new_state()
 
     def tearDown(self):
+        self.alert_patch.stop()
         agent.STATE_PATH = self.old_path
         self.directory.cleanup()
 

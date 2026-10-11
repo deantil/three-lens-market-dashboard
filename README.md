@@ -39,6 +39,18 @@ The bot pauses on unrecognized broker orders/holdings. It uses only `CHATGPT_...
 
 ## Options research and paper trading
 
+Every new buy **and sell** now requires an emailed proposal and explicit approval. See the email policy below.
+
+## Email-before-order approval
+
+Every new order must have an SMTP-accepted proposal and explicit approval. Missing sender credentials or failed email blocks submission. Proposals expire after 24 hours. Approve through **Actions → $100 Alpaca paper challenge → Run workflow → mode `approve`**, entering the emailed proposal ID. Email replies do not approve trades. Current signal, cash, quote, contract and risk checks still apply; a changed amount or limit needs a new proposal. Approval is consumed when a durable intent is saved, preventing duplicate orders after uncertain responses. Approval delays can change fills and prevent timely exits; everything remains paper-only.
+
+On first deployment, tracked open orders predating this alert policy are requested canceled. Completed/partial fills are reconciled and preserved. No foreign orders are canceled and the ledger is not reset. Cancellation can race with a fill; broker confirmation must be checked.
+
+Configure `EMAIL_TO` (recipient), `SMTP_USER` (sender), `SMTP_PASS` (SMTP/app password) as repository Actions secrets, optionally `SMTP_HOST` (default Gmail SSL, port 465). No values belong in public code/state or chat. For Gmail use an eligible Google App Password with 2-Step Verification: https://support.google.com/accounts/answer/185833. Run workflow mode `test-email` and verify inbox receipt. SMTP acceptance does not prove delivery. Email is not active until a sender is configured and the setup test succeeds.
+
+## Options implementation
+
 `daily-swing-options-v2` inspects Alpaca chains and contract metadata for SPY, QQQ, IWM, AAPL, MSFT, AMD, PLTR and up to five qualified stock signals. Calls and puts expiring in 14–45 calendar days are researched. Only **long calls on qualifying daily stock breakouts** may trade; puts stay research-only. No short options, covered calls, cash-secured puts or spreads are introduced.
 
 One standard whole contract at a time shares the three-position limit and existing cash with stocks/crypto. The entire premium must fit **5% of current strategy equity** ($5 initially), a separate experimental risk cap from the stock/crypto 0.5% planned stop risk. A contract can lose its entire premium. No affordable contract is a likely, valid result; the budget is never increased to force a trade. No stock is sold solely to create an options slot.
@@ -58,6 +70,8 @@ Thinkorswim documents dollar-based fractional orders on eligible equities/ETFs; 
 Direct spot crypto is marked **not an exact thinkorswim match**. Keep those trades on Alpaca paper; no automatic futures/ETF proxy is introduced. [Schwab's crypto page](https://www.schwab.com/cryptocurrency) currently describes direct crypto as coming soon and lists ETPs/futures exposure. Thus exact replication of every Alpaca crypto trade cannot be guaranteed. Trading everything on Alpaca and maintaining a manual comparison report is supported; identical executions across platforms are not.
 
 ## Realistic backtests and weekly reviews
+
+Weekly reviews also compare three predefined relative-volume thresholds (1.2, deployed 1.5, and 2.0) using identical sizing and execution assumptions. Candidate selection uses development net return only, requires 25 development exits, positive return, profit factor at least 1.2 and drawdown at most 10%. Holdout and higher-cost results are reported separately. If none qualifies, the report says so. No rule changes are automatic. Repeated historical holdout reviews are not blind prospective validation; no best strategy or maximum profit is guaranteed. Approval-gated paper results will differ from historical automatic-fill simulations.
 
 `Weekly paper strategy review` runs Saturdays at 15:00 UTC, or manually. It publishes `research/review.md` and `research/review.json` on `paper-state`, workflow summaries and 90-day artifacts. Trading/review workflows share one concurrency group. No rules change automatically.
 

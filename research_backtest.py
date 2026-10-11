@@ -189,13 +189,16 @@ def main():
         raise RuntimeError("Incomplete frozen-universe history; no backtest report will be published")
     # Anchor signal evaluation at the next UTC midnight so today's test bar is
     # complete, while still passing only the historical prefix into the rule.
-    def signal(symbol, bars, day):
+    def signal(symbol, bars, day, volume_threshold=1.5):
         prior_now = agent.now
+        prior_volume = agent.MIN_RELATIVE_VOLUME
+        agent.MIN_RELATIVE_VOLUME = volume_threshold
         agent.now = lambda: datetime.fromisoformat(day).replace(tzinfo=timezone.utc) + timedelta(days=1)
         try:
             return agent.make_candidate(symbol, "stock", bars)
         finally:
             agent.now = prior_now
+            agent.MIN_RELATIVE_VOLUME = prior_volume
     end = (as_of.date() - timedelta(days=1)).isoformat()
     start = (as_of.date() - timedelta(days=730)).isoformat()
     midpoint = (as_of.date() - timedelta(days=365)).isoformat()
@@ -208,13 +211,32 @@ def main():
             spy = [r for r in data["SPY"] if first <= r["t"][:10] <= last]
             result["spy_buy_hold_pct"] = round((float(spy[-1]["c"]) / (float(spy[0]["o"]) * (1 + slip)) * (1 - slip) - 1) * 100, 3)
             reports[label][label_cost] = result
+    comparisons = {}
+    for name, threshold in (('volume_1.2', 1.2), ('deployed_volume_1.5', 1.5), ('volume_2.0', 2.0)):
+        candidate_signal = lambda s, b, d, v=threshold: signal(s, b, d, v)
+        development = stock_replay(data, candidate_signal, start, development_end)
+        holdout = stock_replay(data, candidate_signal, midpoint, end)
+        stress = stock_replay(data, candidate_signal, midpoint, end, .003, .01)
+        comparisons[name] = {'relative_volume': threshold, 'development': development['metrics'],
+                             'holdout': holdout['metrics'], 'holdout_stress': stress['metrics']}
+    eligible = {name: r for name, r in comparisons.items()
+                if r['development']['exit_fills'] >= 25 and r['development']['return_pct'] > 0
+                and (r['development']['profit_factor'] or 0) >= 1.2
+                and r['development']['max_drawdown_pct'] >= -10}
+    selected = max(eligible, key=lambda name: eligible[name]['development']['return_pct']) if eligible else None
+    iteration = {'candidates': comparisons, 'selected_on_development_only': selected,
+                 'minimum_development_exit_fills': 25, 'automatic_rule_change': False,
+                 'decision': 'No candidate qualifies; no evidence-based promotion or larger allocation.' if not selected
+                             else 'Development candidate only; inspect prospective paper evidence before promoting.',
+                 'objective': 'Development net return subject to minimum samples, profit factor >=1.2 and drawdown <=10%; no guarantee of maximum profit.',
+                 'caveat': 'Same ETF subset and repeated historical holdout views; no blind prospective validation. Approval-gated paper fills differ from automatic historical replay.'}
     option_rows = []
     for path in Path(args.output).glob("quotes-*.jsonl"):
         option_rows.extend(json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip())
     option_report = option_replay(option_rows)
     state = json.loads(Path(args.state).read_text()) if Path(args.state).exists() else {}
     result = {"as_of": as_of.isoformat(), "strategy_version": agent.STRATEGY_VERSION, "universe": list(UNIVERSE),
-              "stocks": reports, "options": option_report, "paper_status": state.get("broker_status"),
+              "stocks": reports, "options": option_report, "iteration": iteration, "paper_status": state.get("broker_status"),
               "limitations": ["Fixed current ETF universe, not full-market or crypto validation; universe selection still subjective.",
                               "IEX coverage and split-adjusted daily bars; dividends excluded from strategy and SPY benchmark.",
                               "Close-based stops; next-open fills include gaps, fractional shares and shared cash; no shorting or leverage.",
@@ -235,6 +257,12 @@ def main():
     lines += ["", f"Options: {option_report['status']}; {len(option_rows)} archived observations; {option_report['filled_exits']} filled exits.",
               "At least 25 exits across distinct trades and adequate regime coverage are needed before drawing conclusions.",
               "", "## Limitations", *["- " + line for line in result["limitations"]]]
+    lines += ['', '## Candidate comparison (research only)',
+              '| Rule | Dev return % | Dev exits | Holdout return % | Stress return % |',
+              '|---|---:|---:|---:|---:|']
+    for name, row in comparisons.items():
+        lines.append(f"| {name} | {row['development']['return_pct']} | {row['development']['exit_fills']} | {row['holdout']['return_pct']} | {row['holdout_stress']['return_pct']} |")
+    lines += ['', iteration['decision'], iteration['objective'], iteration['caveat']]
     (output / "review.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
 
