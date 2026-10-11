@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-11T17:42:01.325444+00:00",
+  "as_of": "2026-10-11T17:48:32.861339+00:00",
   "strategy_version": "daily-swing-options-v2",
   "universe": [
     "SPY",
@@ -2259,9 +2259,9 @@
       "daily_volatility_pct": null
     },
     "filled_exits": 0,
-    "skipped_quotes": 0,
+    "skipped_quotes": 200,
     "missing_exit_charged_full_premium": false,
-    "observations": 0,
+    "observations": 200,
     "status": "insufficient_data"
   },
   "paper_status": "connected_paper",

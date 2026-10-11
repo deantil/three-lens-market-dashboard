@@ -1,6 +1,6 @@
 # Weekly paper strategy review
 
-Generated 2026-10-11T17:42:01.325444+00:00
+Generated 2026-10-11T17:48:32.861339+00:00
 Paper only. No strategy changes are applied automatically.
 
 | Period | Costs | Return % | Max DD % | Exit fills | SPY % |
@@ -10,7 +10,7 @@ Paper only. No strategy changes are applied automatically.
 | holdout | base | -1.624 | -1.993 | 4 | 17.597 |
 | holdout | stress | -2.1 | -2.418 | 4 | 17.127 |
 
-Options: insufficient_data; 0 archived observations; 0 filled exits.
+Options: insufficient_data; 200 archived observations; 0 filled exits.
 At least 25 exits across distinct trades and adequate regime coverage are needed before drawing conclusions.
 
 ## Limitations
