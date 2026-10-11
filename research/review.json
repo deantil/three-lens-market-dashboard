@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-11T17:48:32.861339+00:00",
+  "as_of": "2026-10-11T18:12:47.070346+00:00",
   "strategy_version": "daily-swing-options-v2",
   "universe": [
     "SPY",
@@ -2259,10 +2259,101 @@
       "daily_volatility_pct": null
     },
     "filled_exits": 0,
-    "skipped_quotes": 200,
+    "skipped_quotes": 600,
     "missing_exit_charged_full_premium": false,
-    "observations": 200,
+    "observations": 600,
     "status": "insufficient_data"
+  },
+  "iteration": {
+    "candidates": {
+      "volume_1.2": {
+        "relative_volume": 1.2,
+        "development": {
+          "return_pct": -2.813,
+          "max_drawdown_pct": -4.123,
+          "exit_fills": 10,
+          "profit_factor": 0.0,
+          "win_rate_pct": 0.0,
+          "daily_volatility_pct": 0.186
+        },
+        "holdout": {
+          "return_pct": -3.243,
+          "max_drawdown_pct": -3.606,
+          "exit_fills": 14,
+          "profit_factor": 0.128,
+          "win_rate_pct": 14.3,
+          "daily_volatility_pct": 0.167
+        },
+        "holdout_stress": {
+          "return_pct": -4.437,
+          "max_drawdown_pct": -4.746,
+          "exit_fills": 14,
+          "profit_factor": 0.069,
+          "win_rate_pct": 14.3,
+          "daily_volatility_pct": 0.16
+        }
+      },
+      "deployed_volume_1.5": {
+        "relative_volume": 1.5,
+        "development": {
+          "return_pct": -2.45,
+          "max_drawdown_pct": -3.009,
+          "exit_fills": 6,
+          "profit_factor": 0.0,
+          "win_rate_pct": 0.0,
+          "daily_volatility_pct": 0.148
+        },
+        "holdout": {
+          "return_pct": -1.624,
+          "max_drawdown_pct": -1.993,
+          "exit_fills": 4,
+          "profit_factor": 0.0,
+          "win_rate_pct": 0.0,
+          "daily_volatility_pct": 0.072
+        },
+        "holdout_stress": {
+          "return_pct": -2.1,
+          "max_drawdown_pct": -2.418,
+          "exit_fills": 4,
+          "profit_factor": 0.0,
+          "win_rate_pct": 0.0,
+          "daily_volatility_pct": 0.072
+        }
+      },
+      "volume_2.0": {
+        "relative_volume": 2.0,
+        "development": {
+          "return_pct": -1.138,
+          "max_drawdown_pct": -1.737,
+          "exit_fills": 3,
+          "profit_factor": 0.0,
+          "win_rate_pct": 0.0,
+          "daily_volatility_pct": 0.052
+        },
+        "holdout": {
+          "return_pct": 0.0,
+          "max_drawdown_pct": 0,
+          "exit_fills": 0,
+          "profit_factor": null,
+          "win_rate_pct": null,
+          "daily_volatility_pct": 0.0
+        },
+        "holdout_stress": {
+          "return_pct": 0.0,
+          "max_drawdown_pct": 0,
+          "exit_fills": 0,
+          "profit_factor": null,
+          "win_rate_pct": null,
+          "daily_volatility_pct": 0.0
+        }
+      }
+    },
+    "selected_on_development_only": null,
+    "minimum_development_exit_fills": 25,
+    "automatic_rule_change": false,
+    "decision": "No candidate qualifies; no evidence-based promotion or larger allocation.",
+    "objective": "Development net return subject to minimum samples, profit factor >=1.2 and drawdown <=10%; no guarantee of maximum profit.",
+    "caveat": "Same ETF subset and repeated historical holdout views; no blind prospective validation. Approval-gated paper fills differ from automatic historical replay."
   },
   "paper_status": "connected_paper",
   "limitations": [
