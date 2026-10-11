@@ -92,11 +92,20 @@
       "positions": 0,
       "broker_equity": 300.0,
       "strategy_version": "daily-swing-v1"
+    },
+    {
+      "date": "2026-10-11T05:50:50.247266+00:00",
+      "equity": 100.0,
+      "benchmark": 100.0,
+      "cash": 100.0,
+      "positions": 0,
+      "broker_equity": 300.0,
+      "strategy_version": "daily-swing-v1"
     }
   ],
-  "last_bar_date": "2026-10-09",
-  "last_run_utc": "2026-10-10T12:14:58.381662+00:00",
-  "last_scan_utc": "2026-10-10T12:14:54.985635+00:00",
+  "last_bar_date": "2026-10-10",
+  "last_run_utc": "2026-10-11T05:50:50.247255+00:00",
+  "last_scan_utc": "2026-10-11T05:50:47.382823+00:00",
   "scan_summary": {
     "strategy_version": "daily-swing-v1",
     "eligible_stocks": 10816,
@@ -105,7 +114,7 @@
     "qualifying_signals": 4,
     "stocks_with_bars": 10638,
     "crypto_with_bars": 36,
-    "latest_completed_bar_date": "2026-10-09",
+    "latest_completed_bar_date": "2026-10-10",
     "stock_data_feed": "Alpaca IEX daily bars",
     "crypto_data_feed": "Alpaca US daily bars",
     "options_traded": false
