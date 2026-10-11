@@ -164,7 +164,7 @@ def calculate_paper_performance(history, trades):
             for lot in lots.get(symbol, []):
                 portion = min(remaining, lot[0])
                 if portion > 0:
-                    realized += portion * (price - lot[1])
+                    realized += portion * (price - lot[1]) * as_number(trade.get("multiplier", 1))
                     lot[0] -= portion
                     remaining -= portion
                     matched += portion
@@ -529,8 +529,9 @@ with tab5:
 with tab6:
     st.subheader("$100 to $1,000 · free paper-trading challenge")
     st.warning("Paper trading only. Orders go to Alpaca's paper endpoint; no live-trading endpoint is configured. The bot starts with $100 and cannot promise a profit or a 10× return.")
-    st.caption("Once daily, the paper agent scans Alpaca-tradable US equities and supported USD crypto pairs using completed daily bars. A candidate must have a 50-day uptrend above its 200-day average, a close above the previous 20-day high, volume at least 1.5× its recent average, positive 63-day momentum, and adequate dollar volume. It can hold up to three positions; each uses at most 20% of the $100 strategy equity, with planned risk capped at 0.5% of equity. This is an unvalidated paper experiment, not a profit promise.")
+    st.caption("The daily stock/crypto scan uses completed bars, trend, breakout, volume and liquidity rules. Up to three positions share one $100 ledger. Stock/crypto positions use at most 20% of equity with 0.5% planned stop risk. Intraday options checks research calls and puts; only long calls on qualifying breakouts may trade, one whole contract, with the entire premium capped at 5% of equity ($5 initially). Fresh OPRA quotes and options level 2 are required. No affordable contract means no trade.")
     st.link_button("Open the paper-agent runs", "https://github.com/deantil/three-lens-market-dashboard/actions/workflows/paper-challenge.yml")
+    st.link_button("Open weekly backtests and reviews", "https://github.com/deantil/three-lens-market-dashboard/actions/workflows/research-review.yml")
     if st.button("Load latest paper-agent report"):
         st.session_state["load_paper_report"] = True
 
@@ -538,6 +539,18 @@ with tab6:
         try:
             agent_state = get_paper_state()
             history = agent_state.get("equity_history", [])
+            st.caption(f"Broker: {agent_state.get('broker_status', 'unknown')} · {agent_state.get('message', '')}")
+            research = agent_state.get("options_research", {})
+            if research:
+                option_summary = research.get("summary", {})
+                st.markdown("**Options research and paper eligibility**")
+                st.caption(f"Feed: {option_summary.get('feed', 'unknown')} · {option_summary.get('contracts', 0)} contracts inspected · {option_summary.get('eligible', 0)} eligible within the premium budget · Checked {research.get('as_of', 'unknown')}")
+                if research.get("candidates"):
+                    st.dataframe(pd.DataFrame(research['candidates']), hide_index=True, use_container_width=True)
+                for warning in agent_state.get("options_warnings", []):
+                    st.warning(warning)
+                for error in option_summary.get("errors", []):
+                    st.caption(error)
             if not history:
                 st.info(agent_state.get("message") or "Waiting for the first paper run. Open Actions and choose Run workflow.")
             else:
@@ -580,7 +593,7 @@ with tab6:
                     st.markdown("**Open paper positions**")
                     st.dataframe(pd.DataFrame(agent_state["positions"]), hide_index=True, use_container_width=True)
                 else:
-                    st.info("No open paper positions. The agent waits when no stock or crypto candidate passes every rule.")
+                    st.info("No open paper positions. The agent waits when no candidate meets the rules and budget.")
                 if agent_state.get("pending"):
                     st.markdown("**Orders waiting for a fill**")
                     st.dataframe(pd.DataFrame(agent_state["pending"]), hide_index=True, use_container_width=True)
@@ -592,10 +605,11 @@ with tab6:
             st.error(f"Could not load the latest paper-agent report: {exc}")
     else:
         st.info("The dashboard is ready. Click **Load latest paper-agent report** to fetch the paper bot status.")
-    st.caption("Alpaca paper fills are simulated and may differ from real execution. The bot checks once daily, not continuously; GitHub runs can be delayed or skipped. It records results but does not change its own rules. Rule changes should be compared with the SPY benchmark and risk statistics before promotion.")
+    st.caption("Paper fills are simulated. Stock/crypto checks run daily; options checks run several times during US sessions, subject to GitHub delays and skipped runs. Options exits are attempted at 50% premium loss or five calendar days before expiry; unfilled exits and gaps remain possible. Weekly reviews compare conservative base/stress stock backtests and archived options quote replays. Rules never change automatically.")
 
 
 with st.expander("How sizing and the goal tracker work"):
     st.write(f"Risk budget per trade is ${capital * risk_pct / 100:,.2f} at the selected {risk_pct:.2f}% account risk. Reference stops use the lower of the recent 10-day low or a 6% reference distance. Share counts are capped so the position value does not exceed the account balance. Actual fills, gaps, fees, and losses can differ substantially.")
     st.write("A $1,000 to $10,000 year-end target requires an exceptionally high compounded return, especially late in the year. The dashboard shows the arithmetic pace only; it does not predict or promise that outcome.")
+
 

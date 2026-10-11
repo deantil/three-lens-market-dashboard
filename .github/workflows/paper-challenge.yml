@@ -1,73 +1,82 @@
 name: $100 Alpaca paper challenge
-
 on:
   push:
     branches: [main]
-    paths:
-      - ".github/workflows/paper-challenge.yml"
-      - "paper_agent.py"
+    paths: [paper_agent.py, options_research.py, '.github/workflows/paper-challenge.yml']
   schedule:
-    - cron: "15 0 * * *"
+    - cron: '15 0 * * *'
+    - cron: '45 14,16,18 * * 1-5'
+    - cron: '0 20 * * 1-5'
   workflow_dispatch:
-
+    inputs:
+      mode:
+        type: choice
+        options: [daily, options]
+        default: daily
+        description: Paper mode
 permissions:
   contents: write
-
 concurrency:
   group: daily-paper-challenge
   cancel-in-progress: false
-
 jobs:
   update-paper-account:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
-      - name: Check out the app
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install HTTP client
-        run: python -m pip install --disable-pip-version-check requests
-
-      - name: Restore the paper account
+      - uses: actions/checkout@v4
+        with: {ref: main}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install --disable-pip-version-check requests
+      - name: Test ledger and research safeguards
+        run: python -m unittest discover -s tests -v
+      - name: Restore existing ledger and research archive
         shell: bash
         run: |
-          if git fetch origin paper-state; then
-            if git show FETCH_HEAD:paper_challenge_state.json > paper_challenge_state.json 2>/dev/null; then
-              echo "Restored paper account from paper-state branch."
-            else
-              cp outputs/paper_challenge_state.json paper_challenge_state.json
-            fi
-          else
-            cp outputs/paper_challenge_state.json paper_challenge_state.json
+          git fetch origin paper-state
+          git show FETCH_HEAD:paper_challenge_state.json > paper_challenge_state.json
+          test -s paper_challenge_state.json
+          if git cat-file -e FETCH_HEAD:research 2>/dev/null; then
+            git archive FETCH_HEAD research | tar -x
           fi
-
-      - name: Run one paper-trading step
+      - name: Run paper agent
         env:
           CHATGPT_APCA_API_KEY_ID: ${{ secrets.CHATGPT_APCA_API_KEY_ID }}
           CHATGPT_APCA_API_SECRET_KEY: ${{ secrets.CHATGPT_APCA_API_SECRET_KEY }}
-        run: python paper_agent.py paper_challenge_state.json
-
-      - name: Publish updated paper state
+          PAPER_OPTIONS_ONLY: ${{ (github.event_name == 'workflow_dispatch' && inputs.mode == 'options') || (github.event_name == 'schedule' && github.event.schedule != '15 0 * * *') }}
         shell: bash
         run: |
+          if [ "$PAPER_OPTIONS_ONLY" = true ]; then
+            python paper_agent.py paper_challenge_state.json --options-only
+          else
+            python paper_agent.py paper_challenge_state.json
+          fi
+      - name: Publish state even if the agent paused
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          if [ ! -s paper_challenge_state.json ]; then exit 0; fi
           cp paper_challenge_state.json "$RUNNER_TEMP/paper_challenge_state.json"
-          rm -f paper_challenge_state.json
+          if [ -d research ]; then cp -r research "$RUNNER_TEMP/paper-research"; fi
+          rm paper_challenge_state.json
+          rm -rf research
           git fetch origin paper-state
           git checkout -B paper-state FETCH_HEAD
           cp "$RUNNER_TEMP/paper_challenge_state.json" paper_challenge_state.json
+          if [ -d "$RUNNER_TEMP/paper-research" ]; then mkdir -p research; cp -r "$RUNNER_TEMP/paper-research/." research/; fi
           git add paper_challenge_state.json
-          if git diff --cached --quiet; then
-            echo "No new daily bar; paper state did not change."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Update daily paper challenge"
+          if [ -d research ]; then git add research; fi
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Update paper ledger and options quote archive'
           git push origin paper-state
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: paper-run-${{ github.run_id }}
+          path: |
+            paper_challenge_state.json
+            research/
+          retention-days: 90
