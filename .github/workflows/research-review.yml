@@ -7,7 +7,7 @@ on:
     - cron: '0 15 * * 6'
   workflow_dispatch:
   pull_request:
-    paths: ['paper_agent.py', 'options_research.py', 'research_backtest.py', 'tests/**', '.github/workflows/**']
+    paths: ['paper_agent.py', 'options_research.py', 'manual_replication.py', 'research_backtest.py', 'tests/**', '.github/workflows/**']
 permissions:
   contents: write
 concurrency:

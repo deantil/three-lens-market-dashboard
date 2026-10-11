@@ -2,7 +2,7 @@ name: $100 Alpaca paper challenge
 on:
   push:
     branches: [main]
-    paths: [paper_agent.py, options_research.py, '.github/workflows/paper-challenge.yml']
+    paths: [paper_agent.py, options_research.py, manual_replication.py, '.github/workflows/paper-challenge.yml']
   schedule:
     - cron: '15 0 * * *'
     - cron: '45 14,16,18 * * 1-5'
