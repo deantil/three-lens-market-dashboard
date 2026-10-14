@@ -13,7 +13,7 @@ def proposal_tickets(state, as_of=None):
             continue
         request = proposal['request']
         order = {'asset_class': proposal['asset_class'], 'symbol': request['symbol'], 'side': request['side'],
-                 'request': request, 'client_order_id': proposal['id'], 'notional': float(request.get('notional') or 0),
+                 'request': request, 'client_order_id': proposal['id'], 'notional': (float(request.get('limit_price') or 0) * float(request.get('qty') or 0) * 100 if proposal['asset_class'] == 'option' else float(request.get('notional') or 0)),
                  'qty': float(request['qty']) if 'qty' in request else None,
                  'price': proposal.get('reference_price') or 0, 'stop_fraction': proposal.get('stop_fraction') or 0,
                  'signal_bar_date': proposal.get('signal_date')}
@@ -52,6 +52,7 @@ def tickets(state):
                "order_type": request.get("type", "market").upper(),
                "time_in_force": request.get("time_in_force", "gtc" if asset == "crypto" else "day").upper(),
                "dollar_amount": round(remaining_dollars, 2) if side == "buy" else None,
+               "reference_price": order.get('price'),
                "quantity": quantity, "limit_price": request.get("limit_price"),
                "submitted_utc": order.get("submitted_utc"), "signal_bar_date": order.get("signal_bar_date"),
                "already_filled_quantity": accounted_qty,
