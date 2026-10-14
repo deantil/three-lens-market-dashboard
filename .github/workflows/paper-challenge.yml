@@ -11,11 +11,11 @@ on:
     inputs:
       mode:
         type: choice
-        options: [daily, options, approve, test-email]
+        options: [daily, options, approve]
         default: daily
         description: Paper mode
       proposal_id:
-        description: Emailed proposal ID (approve mode only)
+        description: Dashboard proposal ID (approve mode only)
         type: string
         default: ''
 permissions:
@@ -48,18 +48,12 @@ jobs:
         env:
           CHATGPT_APCA_API_KEY_ID: ${{ secrets.CHATGPT_APCA_API_KEY_ID }}
           CHATGPT_APCA_API_SECRET_KEY: ${{ secrets.CHATGPT_APCA_API_SECRET_KEY }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
           PAPER_MODE: ${{ inputs.mode }}
           APPROVE_PROPOSAL_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'approve' && inputs.proposal_id || '' }}
           PAPER_OPTIONS_ONLY: ${{ (github.event_name == 'workflow_dispatch' && inputs.mode == 'options') || (github.event_name == 'schedule' && github.event.schedule != '15 0 * * *') }}
         shell: bash
         run: |
-          if [ "$PAPER_MODE" = test-email ]; then
-            python trade_alerts.py
-          elif [ "$PAPER_OPTIONS_ONLY" = true ]; then
+          if [ "$PAPER_OPTIONS_ONLY" = true ]; then
             python paper_agent.py paper_challenge_state.json --options-only
           else
             python paper_agent.py paper_challenge_state.json

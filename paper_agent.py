@@ -491,8 +491,8 @@ def run() -> None:
     api = Alpaca(key, secret)
     try:
         account = api.trade("GET", "/account")
-        if not all(os.getenv(k, '').strip() for k in ('EMAIL_TO', 'SMTP_USER', 'SMTP_PASS')):
-            state['email_alert_status'] = 'not_configured: EMAIL_TO, SMTP_USER and SMTP_PASS required'
+        state['email_alert_status'] = 'disabled_by_user'
+        state['alert_channel'] = 'dashboard'
         if account.get("status") != "ACTIVE" or account.get("trading_blocked"):
             raise RuntimeError("Alpaca paper account is not active for trading.")
         reconcile_foreign_activity(api, state)
@@ -580,6 +580,8 @@ def run() -> None:
             if budget < 1.0:
                 continue
             if not send_order(api, state, row, "buy", notional=budget):
+                slots -= 1  # Present at most the available number of entry slots.
+                reserved += budget
                 continue
             processed[symbol] = row["bar_date"]
             owned.add(symbol)
@@ -617,6 +619,9 @@ def run() -> None:
             "tickets": manual_replication.tickets(state), "holdings": manual_replication.holdings(state),
             "limitation": "All asset classes are tracked. Exact spot-crypto replication is unavailable; no automatic ETF/futures substitution. Broker eligibility and identical fills cannot be guaranteed.",
         }
+        state['manual_alerts'] = manual_replication.proposal_tickets(state, now())
+        research_dir.mkdir(exist_ok=True)
+        (research_dir / 'manual_alerts.json').write_text(json.dumps({'as_of': now().isoformat(), 'alerts': state['manual_alerts']}, indent=2) + '\n', encoding='utf-8')
         state["message"] = (
             "Paper only. Daily swing rules scan Alpaca-tradable US equities and USD crypto. "
             "Options research and small long-call paper orders share the same ledger. No live endpoint or profit guarantee."

@@ -1,5 +1,27 @@
 """Readable trade tickets for manual review. Never sends orders to another broker."""
 import re
+from datetime import datetime, timezone
+
+
+def proposal_tickets(state, as_of=None):
+    as_of = as_of or datetime.now(timezone.utc)
+    result = []
+    for proposal in state.get('trade_proposals', {}).values():
+        if not proposal.get('published_utc') or proposal.get('consumed') or proposal.get('status') not in {'awaiting_approval', 'approved_pending_revalidation'}:
+            continue
+        if datetime.fromisoformat(proposal['expires_utc']) <= as_of:
+            continue
+        request = proposal['request']
+        order = {'asset_class': proposal['asset_class'], 'symbol': request['symbol'], 'side': request['side'],
+                 'request': request, 'client_order_id': proposal['id'], 'notional': float(request.get('notional') or 0),
+                 'qty': float(request['qty']) if 'qty' in request else None,
+                 'price': proposal.get('reference_price') or 0, 'stop_fraction': proposal.get('stop_fraction') or 0,
+                 'signal_bar_date': proposal.get('signal_date')}
+        ticket = tickets({'pending': [order]})[0]
+        ticket.update(alpaca_status='PROPOSAL ONLY — NOT SUBMITTED', expires_utc=proposal['expires_utc'],
+                      published_utc=proposal['published_utc'], approval_status=proposal['status'])
+        result.append(ticket)
+    return result
 
 
 def option_details(symbol):
