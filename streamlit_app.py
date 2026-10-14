@@ -541,11 +541,18 @@ with tab6:
             agent_state = get_paper_state()
             history = agent_state.get("equity_history", [])
             st.caption(f"Broker: {agent_state.get('broker_status', 'unknown')} · {agent_state.get('message', '')}")
-            st.markdown('**Email alerts and paper-order approval**')
-            st.caption(f"Email status: {agent_state.get('email_alert_status', 'not configured or tested')}. No new order is submitted until SMTP accepts its proposal and you approve the exact order through GitHub Actions. Inbox delivery is not guaranteed; verify your setup test.")
-            proposals = list(agent_state.get('trade_proposals', {}).values())
-            if proposals:
-                st.dataframe(pd.DataFrame(proposals[-30:]), hide_index=True, use_container_width=True)
+            st.markdown('**Current paper trade alerts**')
+            st.caption('Email is disabled. Alerts are proposals only; no paper order is submitted until you approve its ID in the paper-agent workflow. Market prices and eligibility must pass again before submission. Alerts expire after 24 hours; refresh before copying.')
+            current_alerts = manual_replication.proposal_tickets(agent_state)
+            if current_alerts:
+                alert_frame = pd.DataFrame(current_alerts)
+                st.dataframe(alert_frame, hide_index=True, use_container_width=True)
+                st.download_button('Download current replication alerts', alert_frame.to_csv(index=False), 'replication_alerts.csv', 'text/csv')
+            else:
+                st.info('No current published trade alerts. Run a daily scan to refresh proposals.')
+            if st.button('Refresh latest published paper report'):
+                get_paper_state.clear()
+                st.rerun()
             st.markdown("**Manual replication in thinkorswim paperMoney**")
             st.caption("All asset classes are listed. Confirm symbol and order support in your own paperMoney account. Direct spot-crypto trades are not an exact match; ETF/futures substitutes are different trades. Manual fills can differ. Alpaca remains the only automated paper engine.")
             copy_tickets = manual_replication.tickets(agent_state)

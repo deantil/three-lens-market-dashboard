@@ -39,15 +39,15 @@ The bot pauses on unrecognized broker orders/holdings. It uses only `CHATGPT_...
 
 ## Options research and paper trading
 
-Every new buy **and sell** now requires an emailed proposal and explicit approval. See the email policy below.
+Email is disabled at the user's request. Trade alerts are published in the dashboard and paper-state research/manual_alerts.json. No SMTP credentials or Google app password are needed.
 
-## Email-before-order approval
+## Dashboard alerts and manual replication
 
-Every new order must have an SMTP-accepted proposal and explicit approval. Missing sender credentials or failed email blocks submission. Proposals expire after 24 hours. Approve through **Actions → $100 Alpaca paper challenge → Run workflow → mode `approve`**, entering the emailed proposal ID. Email replies do not approve trades. Current signal, cash, quote, contract and risk checks still apply; a changed amount or limit needs a new proposal. Approval is consumed when a durable intent is saved, preventing duplicate orders after uncertain responses. Approval delays can change fills and prevent timely exits; everything remains paper-only.
+The daily scan publishes up to the available three entry slots, with symbol, side, dollar allocation or contracts, order type, signal date, reference stop, expiry and approval ID. Download current replication alerts from the paper challenge tab. Refresh latest published paper report reloads the state; Run workflow in daily mode triggers a new scan. Expired/consumed alerts and unrefreshed legacy email failures are excluded.
 
-On first deployment, tracked open orders predating this alert policy are requested canceled. Completed/partial fills are reconciled and preserved. No foreign orders are canceled and the ledger is not reset. Cancellation can race with a fill; broker confirmation must be checked.
+Alerts are proposals, not submitted orders. To approve an exact paper order, open Actions → paper challenge → Run workflow → approve and enter its dashboard ID. Signal, cash, quote and risk checks run again. A changed order needs a new approval; proposals expire after 24 hours. No order is submitted just because an alert exists. Approval can delay entries and exits.
 
-Configure `EMAIL_TO` (recipient), `SMTP_USER` (sender), `SMTP_PASS` (SMTP/app password) as repository Actions secrets, optionally `SMTP_HOST` (default Gmail SSL, port 465). No values belong in public code/state or chat. For Gmail use an eligible Google App Password with 2-Step Verification: https://support.google.com/accounts/answer/185833. Run workflow mode `test-email` and verify inbox receipt. SMTP acceptance does not prove delivery. Email is not active until a sender is configured and the setup test succeeds.
+Stocks and listed options have manual thinkorswim paperMoney instructions, subject to account/symbol eligibility and different fills. Spot crypto is explicitly marked as having no exact thinkorswim match; no ETF/futures replacement is invented. Reference stops are daily checks, not guaranteed resting broker orders. Paper only.
 
 ## Options implementation
 
