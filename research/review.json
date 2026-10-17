@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-14T15:06:18.261071+00:00",
+  "as_of": "2026-10-17T17:45:47.866023+00:00",
   "strategy_version": "daily-swing-options-v2",
   "universe": [
     "SPY",
@@ -85,9 +85,6 @@
           }
         ],
         "curve": [
-          100.0,
-          100.0,
-          100.0,
           100.0,
           100.0,
           100.0,
@@ -334,12 +331,12 @@
           99.48360699520717,
           99.21474464431927,
           97.80806096288828,
+          98.39390309279366,
+          98.39390309279366,
+          98.39390309279366,
           98.39390309279366
         ],
         "dates": [
-          "2024-10-14",
-          "2024-10-15",
-          "2024-10-16",
           "2024-10-17",
           "2024-10-18",
           "2024-10-21",
@@ -586,11 +583,14 @@
           "2025-10-08",
           "2025-10-09",
           "2025-10-10",
-          "2025-10-13"
+          "2025-10-13",
+          "2025-10-14",
+          "2025-10-15",
+          "2025-10-16"
         ],
         "open_positions_at_end": 0,
         "pending_at_end": 0,
-        "spy_buy_hold_pct": 13.855
+        "spy_buy_hold_pct": 12.551
       },
       "stress": {
         "metrics": {
@@ -668,9 +668,6 @@
           }
         ],
         "curve": [
-          100.0,
-          100.0,
-          100.0,
           100.0,
           100.0,
           100.0,
@@ -917,12 +914,12 @@
           98.87048306330897,
           98.60369765236216,
           97.20779842638002,
+          97.64818576734908,
+          97.64818576734908,
+          97.64818576734908,
           97.64818576734908
         ],
         "dates": [
-          "2024-10-14",
-          "2024-10-15",
-          "2024-10-16",
           "2024-10-17",
           "2024-10-18",
           "2024-10-21",
@@ -1169,22 +1166,25 @@
           "2025-10-08",
           "2025-10-09",
           "2025-10-10",
-          "2025-10-13"
+          "2025-10-13",
+          "2025-10-14",
+          "2025-10-15",
+          "2025-10-16"
         ],
         "open_positions_at_end": 0,
         "pending_at_end": 0,
-        "spy_buy_hold_pct": 13.4
+        "spy_buy_hold_pct": 12.102
       }
     },
     "holdout": {
       "base": {
         "metrics": {
-          "return_pct": -1.825,
-          "max_drawdown_pct": -1.993,
-          "exit_fills": 4,
+          "return_pct": -2.487,
+          "max_drawdown_pct": -2.487,
+          "exit_fills": 5,
           "profit_factor": 0.0,
           "win_rate_pct": 0.0,
-          "daily_volatility_pct": 0.073
+          "daily_volatility_pct": 0.079
         },
         "trades": [
           {
@@ -1218,12 +1218,17 @@
             "entry": 543.7682249999999,
             "exit": 529.474995,
             "pnl": -0.5186805570933188
+          },
+          {
+            "symbol": "QQQ",
+            "entry_date": "2026-09-22",
+            "exit_date": "2026-10-15",
+            "entry": 741.7309899999999,
+            "exit": 717.89139,
+            "pnl": -0.6308800563913088
           }
         ],
         "curve": [
-          100.0,
-          100.0,
-          100.0,
           100.0,
           100.0,
           100.0,
@@ -1471,12 +1476,12 @@
           98.29678339175318,
           98.39628627821232,
           98.25708809130406,
-          98.1749548097801
+          98.19463415193076,
+          97.8068110665428,
+          97.5132349451992,
+          97.5132349451992
         ],
         "dates": [
-          "2025-10-14",
-          "2025-10-15",
-          "2025-10-16",
           "2025-10-17",
           "2025-10-20",
           "2025-10-21",
@@ -1724,20 +1729,23 @@
           "2026-10-08",
           "2026-10-09",
           "2026-10-12",
-          "2026-10-13"
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15",
+          "2026-10-16"
         ],
-        "open_positions_at_end": 1,
+        "open_positions_at_end": 0,
         "pending_at_end": 0,
-        "spy_buy_hold_pct": 18.154
+        "spy_buy_hold_pct": 15.508
       },
       "stress": {
         "metrics": {
-          "return_pct": -2.3,
-          "max_drawdown_pct": -2.418,
-          "exit_fills": 4,
+          "return_pct": -2.956,
+          "max_drawdown_pct": -2.956,
+          "exit_fills": 5,
           "profit_factor": 0.0,
           "win_rate_pct": 0.0,
-          "daily_volatility_pct": 0.073
+          "daily_volatility_pct": 0.08
         },
         "trades": [
           {
@@ -1771,12 +1779,17 @@
             "entry": 544.8546749999999,
             "exit": 528.414985,
             "pnl": -0.613381176708053
+          },
+          {
+            "symbol": "QQQ",
+            "entry_date": "2026-09-22",
+            "exit_date": "2026-10-15",
+            "entry": 743.2129699999999,
+            "exit": 716.45417,
+            "pnl": -0.7236498489935848
           }
         ],
         "curve": [
-          100.0,
-          100.0,
-          100.0,
           100.0,
           100.0,
           100.0,
@@ -2024,12 +2037,12 @@
           97.87043479397387,
           97.96930781638952,
           97.83099076907402,
-          97.70026786054517
+          97.76893216989824,
+          97.3835640466266,
+          97.04405313293599,
+          97.04405313293599
         ],
         "dates": [
-          "2025-10-14",
-          "2025-10-15",
-          "2025-10-16",
           "2025-10-17",
           "2025-10-20",
           "2025-10-21",
@@ -2277,11 +2290,14 @@
           "2026-10-08",
           "2026-10-09",
           "2026-10-12",
-          "2026-10-13"
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15",
+          "2026-10-16"
         ],
-        "open_positions_at_end": 1,
+        "open_positions_at_end": 0,
         "pending_at_end": 0,
-        "spy_buy_hold_pct": 17.683
+        "spy_buy_hold_pct": 15.047
       }
     }
   },
@@ -2295,9 +2311,9 @@
       "daily_volatility_pct": null
     },
     "filled_exits": 0,
-    "skipped_quotes": 2000,
+    "skipped_quotes": 4400,
     "missing_exit_charged_full_premium": false,
-    "observations": 2000,
+    "observations": 4400,
     "status": "insufficient_data"
   },
   "iteration": {
@@ -2305,28 +2321,28 @@
       "volume_1.2": {
         "relative_volume": 1.2,
         "development": {
-          "return_pct": -1.974,
+          "return_pct": -2.345,
           "max_drawdown_pct": -4.123,
           "exit_fills": 12,
           "profit_factor": 0.362,
           "win_rate_pct": 25.0,
-          "daily_volatility_pct": 0.186
+          "daily_volatility_pct": 0.188
         },
         "holdout": {
-          "return_pct": -3.441,
-          "max_drawdown_pct": -3.606,
+          "return_pct": -3.542,
+          "max_drawdown_pct": -3.542,
           "exit_fills": 14,
-          "profit_factor": 0.128,
-          "win_rate_pct": 14.3,
-          "daily_volatility_pct": 0.167
-        },
-        "holdout_stress": {
-          "return_pct": -4.632,
-          "max_drawdown_pct": -4.746,
-          "exit_fills": 14,
-          "profit_factor": 0.069,
+          "profit_factor": 0.126,
           "win_rate_pct": 14.3,
           "daily_volatility_pct": 0.16
+        },
+        "holdout_stress": {
+          "return_pct": -4.654,
+          "max_drawdown_pct": -4.654,
+          "exit_fills": 14,
+          "profit_factor": 0.068,
+          "win_rate_pct": 14.3,
+          "daily_volatility_pct": 0.152
         }
       },
       "deployed_volume_1.5": {
@@ -2340,20 +2356,20 @@
           "daily_volatility_pct": 0.149
         },
         "holdout": {
-          "return_pct": -1.825,
-          "max_drawdown_pct": -1.993,
-          "exit_fills": 4,
+          "return_pct": -2.487,
+          "max_drawdown_pct": -2.487,
+          "exit_fills": 5,
           "profit_factor": 0.0,
           "win_rate_pct": 0.0,
-          "daily_volatility_pct": 0.073
+          "daily_volatility_pct": 0.079
         },
         "holdout_stress": {
-          "return_pct": -2.3,
-          "max_drawdown_pct": -2.418,
-          "exit_fills": 4,
+          "return_pct": -2.956,
+          "max_drawdown_pct": -2.956,
+          "exit_fills": 5,
           "profit_factor": 0.0,
           "win_rate_pct": 0.0,
-          "daily_volatility_pct": 0.073
+          "daily_volatility_pct": 0.08
         }
       },
       "volume_2.0": {
