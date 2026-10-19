@@ -538,18 +538,35 @@ with tab7:
         condor_min_oi = st.number_input("Minimum open interest per leg", min_value=1, value=50, step=25)
         condor_max_spread = st.slider("Maximum leg quote spread (%)", min_value=5, max_value=50, value=35, step=5)
         run_condor_scan = st.form_submit_button("Find earnings iron condor alerts", type="primary")
+    st.link_button("Cross-check dates on Earnings Whispers", "https://www.earningswhispers.com/calmonth")
+    st.caption("Earnings dates in this scan come from Yahoo Finance and may be estimates. Cross-check the date and before/after-market timing before considering a setup.")
     if run_condor_scan:
         try:
-            if results.empty:
-                frame, scan_meta = pd.DataFrame(), {"checked": 0, "failures": 0}
+            candidate_results = results
+            candidate_source = "loaded dashboard scan"
+            if candidate_results.empty:
+                starter_symbols = [
+                    "AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "TSLA", "AVGO",
+                    "JPM", "ORCL", "NFLX", "AMD", "COST", "WMT", "LLY", "XOM",
+                    "CRM", "UBER", "QCOM", "DIS", "GE", "CAT", "INTC", "PG",
+                ]
+                with st.spinner("Loading a shortlist of 24 liquid US stocks for the earnings scan…"):
+                    starter_prices = get_prices(starter_symbols)
+                    starter_rows = [score_frame(s, d) for s, d in starter_prices.items()]
+                    starter_rows = [row for row in starter_rows if row and row["Price"] >= min_price]
+                    candidate_results = pd.DataFrame(starter_rows)
+                candidate_source = "built-in 24-stock liquid shortlist (no full-market scan needed)"
+            if candidate_results.empty:
+                frame, scan_meta = pd.DataFrame(), {"checked": 0, "failures": 0, "source": candidate_source}
             else:
-                with st.spinner("Checking earnings history, upcoming events, and option chains for up to 20 liquid stocks…"):
+                with st.spinner(f"Checking earnings history and option chains for up to {int(condor_universe_size)} liquid stocks…"):
                     frame, scan_meta = earnings_condors.scan_universe(
-                        results, capital=min(100.0, float(capital)),
+                        candidate_results, capital=min(100.0, float(capital)),
                         max_symbols=int(condor_universe_size),
                         min_open_interest=int(condor_min_oi),
                         max_spread_pct=float(condor_max_spread),
                     )
+                scan_meta["source"] = candidate_source
             st.session_state["earnings_condor_rows"] = frame
             st.session_state["earnings_condor_meta"] = scan_meta
         except Exception as exc:
@@ -558,7 +575,7 @@ with tab7:
     if "earnings_condor_rows" in st.session_state:
         frame = st.session_state["earnings_condor_rows"]
         meta = st.session_state.get("earnings_condor_meta", {})
-        st.caption(f"Checked {meta.get('checked', 0)} tickers · option-chain failures: {meta.get('failures', 0)} · Source: Yahoo Finance. Only names in the loaded stock scan are checked.")
+        st.caption(f"Checked {meta.get('checked', 0)} tickers · option-chain failures: {meta.get('failures', 0)} · Earnings dates and stock prices: Yahoo Finance · Stock list: {meta.get('source', 'loaded dashboard scan')}.")
         if frame.empty:
             st.info("No setups passed all filters. Possible reasons: no upcoming earnings or usable option quotes, fewer than four prior earnings observations, less than 80% historical post-earnings range coverage, reward-to-risk below 2:1, or maximum loss above $100. Check Yahoo earnings dates and live quotes before considering a paper order.")
         else:
