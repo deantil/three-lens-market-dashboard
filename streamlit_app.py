@@ -530,8 +530,9 @@ with tab5:
 
 with tab7:
     st.subheader("Earnings iron condor alerts")
-    st.caption("Scans upcoming earnings among the most liquid stocks already loaded above. The probability is a constant-volatility model estimate for profit at expiration, not a backtested win rate or a guarantee. Earnings gaps can make actual outcomes much worse.")
+    st.caption("Scans upcoming earnings among the most liquid stocks already loaded above. Each candidate must have at least four past earnings events and its breakevens must have contained at least 80% of that stock's observed high/low ranges over the first three sessions after those releases. Historical containment is not a forecast; earnings gaps can still exceed every past move.")
     st.warning("Research alerts only. No order is placed. A 4-leg iron condor has defined but potentially large loss; verify live quotes and earnings timing before any paper trade.")
+    st.caption("Price-based management: review if the stock approaches either short strike, and plan to close after the third trading session following earnings. This plan does not use implied-volatility changes. Warning levels are prompts to review, not guaranteed stop orders; gaps and fills can pass them.")
     with st.form("earnings_condor_form"):
         condor_universe_size = st.select_slider("Most liquid stocks to check", options=[5, 10, 15, 20], value=10)
         condor_min_oi = st.number_input("Minimum open interest per leg", min_value=1, value=50, step=25)
@@ -542,7 +543,7 @@ with tab7:
             if results.empty:
                 frame, scan_meta = pd.DataFrame(), {"checked": 0, "failures": 0}
             else:
-                with st.spinner("Checking upcoming earnings and option chains for up to 20 liquid stocks…"):
+                with st.spinner("Checking earnings history, upcoming events, and option chains for up to 20 liquid stocks…"):
                     frame, scan_meta = earnings_condors.scan_universe(
                         results, capital=min(100.0, float(capital)),
                         max_symbols=int(condor_universe_size),
@@ -559,9 +560,9 @@ with tab7:
         meta = st.session_state.get("earnings_condor_meta", {})
         st.caption(f"Checked {meta.get('checked', 0)} tickers · option-chain failures: {meta.get('failures', 0)} · Source: Yahoo Finance. Only names in the loaded stock scan are checked.")
         if frame.empty:
-            st.info("No suitable earnings iron condors were found in this scan. That can mean no upcoming earnings were returned, quotes were too wide or stale, or the defined risk exceeded the $5 challenge cap.")
+            st.info("No setups passed all filters. Possible reasons: no upcoming earnings or usable option quotes, fewer than four prior earnings observations, less than 80% historical post-earnings range coverage, or no defined-risk structure in the scan. Check Yahoo earnings dates and live quotes before considering a paper order.")
         else:
-            st.markdown("**Highest model-estimated chance of positive expiration P/L, with $5-risk-cap fits shown first**")
+            st.markdown("**Historical-range-qualified setups, ranked by modeled expiry probability; $100 risk-cap fits shown first**")
             st.dataframe(frame, hide_index=True, use_container_width=True, column_config={
                 "Spot $": st.column_config.NumberColumn(format="$%.2f"),
                 "Short put $": st.column_config.NumberColumn(format="$%.2f"),
@@ -575,10 +576,16 @@ with tab7:
                 "Upper breakeven $": st.column_config.NumberColumn(format="$%.2f"),
                 "Est. expiry profit probability %": st.column_config.NumberColumn(format="%.1f%%"),
                 "ATM IV %": st.column_config.NumberColumn(format="%.1f%%"),
+                "Historical event coverage %": st.column_config.NumberColumn(format="%.1f%%"),
+                "Historical 80th pct up move %": st.column_config.NumberColumn(format="%.1f%%"),
+                "Historical 80th pct down move %": st.column_config.NumberColumn(format="%.1f%%"),
+                "Historical events n": st.column_config.NumberColumn(format="%d"),
+                "Price warning below $": st.column_config.NumberColumn(format="$%.2f"),
+                "Price warning above $": st.column_config.NumberColumn(format="$%.2f"),
                 "Reward / max loss": st.column_config.NumberColumn(format="%.3f"),
                 "Risk cap $": st.column_config.NumberColumn(format="$%.2f"),
             })
-            st.caption("The estimate uses the nearest liquid options' implied volatility and assumes a lognormal expiration price with zero drift. It ignores earnings jump behavior, commissions, early assignment, and multi-leg fill slippage. A high estimate is not proof of an edge. Yahoo quotes can be delayed or incomplete; the listed credit is a conservative leg-by-leg estimate, not a guaranteed combo fill.")
+            st.caption("Historical coverage is the share of sampled past earnings whose three-session high/low range fit inside this setup's breakevens. The 80th-percentile columns summarize those observed stock-specific moves; at least four events are required. The separate expiry probability is still an implied-volatility lognormal model estimate, not a backtested win rate. Neither measure guarantees future results. Price warnings are 1% inside each short strike; review/close if approached and use a three-session post-earnings time exit. This does not monitor IV, submit orders, or guarantee stop execution. Yahoo data may be delayed/incomplete; the listed credit uses short bids and long asks, not an executable combo fill. Max loss can exceed the $5 budget; only rows marked Yes fit the $100 risk cap.")
 
 with tab6:
     st.subheader("$100 to $1,000 · free paper-trading challenge")
