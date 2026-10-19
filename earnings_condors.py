@@ -13,6 +13,9 @@ import math
 import pandas as pd
 import yfinance as yf
 
+MAX_CONDOR_LOSS_DOLLARS = 100.0
+MIN_REWARD_TO_RISK = 2.0
+
 
 def _number(value, default=0.0):
     try:
@@ -164,7 +167,7 @@ def scan_symbol(symbol: str, spot: float, capital: float = 100.0,
     except Exception:
         return []
     output = []
-    max_loss_budget = min(5.0, max(0.0, capital * 0.05))
+    max_loss_budget = MAX_CONDOR_LOSS_DOLLARS
     for event in earnings:
         valid_expiries = [expiry for expiry in expirations
                           if event < expiry <= event + timedelta(days=30)
@@ -209,6 +212,9 @@ def scan_symbol(symbol: str, spot: float, capital: float = 100.0,
                             max_loss = max(put_width, call_width) * 100 - max_profit
                             if max_loss <= 0:
                                 continue
+                            reward_to_risk = max_profit / max_loss
+                            if max_loss > MAX_CONDOR_LOSS_DOLLARS or reward_to_risk < MIN_REWARD_TO_RISK:
+                                continue
                             lower_be = short_put["strike"] - credit
                             upper_be = short_call["strike"] + credit
                             up_room_pct = (upper_be / spot - 1) * 100
@@ -239,8 +245,8 @@ def scan_symbol(symbol: str, spot: float, capital: float = 100.0,
                                 "Price warning below $": round(short_put["strike"] * 1.01, 2),
                                 "Price warning above $": round(short_call["strike"] * 0.99, 2),
                                 "Price/time management": "Watch underlying price; review/exit at either short strike; time exit after 3 sessions post-earnings. No IV-based adjustment.",
-                                "Reward / max loss": round(max_profit / max_loss, 3),
-                                "Fits $100 risk cap": "Yes" if max_loss <= max_loss_budget else "No",
+                                "Reward / max loss": round(reward_to_risk, 3),
+                                "Fits $100 risk cap": "Yes",
                                 "Risk cap $": round(max_loss_budget, 2),
                                 "Quote quality": "Yahoo Finance; verify live bid/ask before any paper order",
                             })

@@ -530,7 +530,7 @@ with tab5:
 
 with tab7:
     st.subheader("Earnings iron condor alerts")
-    st.caption("Scans upcoming earnings among the most liquid stocks already loaded above. Each candidate must have at least four past earnings events and its breakevens must have contained at least 80% of that stock's observed high/low ranges over the first three sessions after those releases. Historical containment is not a forecast; earnings gaps can still exceed every past move.")
+    st.caption("Scans upcoming earnings among the most liquid stocks already loaded above. Candidates must pass both trade filters: at least 2:1 maximum-profit-to-maximum-loss, and defined maximum loss no greater than $100. Each candidate must also have at least four past earnings events and breakevens that contained at least 80% of that stock's observed high/low ranges over the first three sessions after those releases.")
     st.warning("Research alerts only. No order is placed. A 4-leg iron condor has defined but potentially large loss; verify live quotes and earnings timing before any paper trade.")
     st.caption("Price-based management: review if the stock approaches either short strike, and plan to close after the third trading session following earnings. This plan does not use implied-volatility changes. Warning levels are prompts to review, not guaranteed stop orders; gaps and fills can pass them.")
     with st.form("earnings_condor_form"):
@@ -560,9 +560,9 @@ with tab7:
         meta = st.session_state.get("earnings_condor_meta", {})
         st.caption(f"Checked {meta.get('checked', 0)} tickers · option-chain failures: {meta.get('failures', 0)} · Source: Yahoo Finance. Only names in the loaded stock scan are checked.")
         if frame.empty:
-            st.info("No setups passed all filters. Possible reasons: no upcoming earnings or usable option quotes, fewer than four prior earnings observations, less than 80% historical post-earnings range coverage, or no defined-risk structure in the scan. Check Yahoo earnings dates and live quotes before considering a paper order.")
+            st.info("No setups passed all filters. Possible reasons: no upcoming earnings or usable option quotes, fewer than four prior earnings observations, less than 80% historical post-earnings range coverage, reward-to-risk below 2:1, or maximum loss above $100. Check Yahoo earnings dates and live quotes before considering a paper order.")
         else:
-            st.markdown("**Historical-range-qualified setups, ranked by modeled expiry probability; $100 risk-cap fits shown first**")
+            st.markdown("**Setups meeting the 2:1 minimum reward-to-risk and $100 maximum-loss limits; ranked by modeled expiry probability**")
             st.dataframe(frame, hide_index=True, use_container_width=True, column_config={
                 "Spot $": st.column_config.NumberColumn(format="$%.2f"),
                 "Short put $": st.column_config.NumberColumn(format="$%.2f"),
@@ -585,7 +585,7 @@ with tab7:
                 "Reward / max loss": st.column_config.NumberColumn(format="%.3f"),
                 "Risk cap $": st.column_config.NumberColumn(format="$%.2f"),
             })
-            st.caption("Historical coverage is the share of sampled past earnings whose three-session high/low range fit inside this setup's breakevens. The 80th-percentile columns summarize those observed stock-specific moves; at least four events are required. The separate expiry probability is still an implied-volatility lognormal model estimate, not a backtested win rate. Neither measure guarantees future results. Price warnings are 1% inside each short strike; review/close if approached and use a three-session post-earnings time exit. This does not monitor IV, submit orders, or guarantee stop execution. Yahoo data may be delayed/incomplete; the listed credit uses short bids and long asks, not an executable combo fill. Max loss can exceed the $5 budget; only rows marked Yes fit the $100 risk cap.")
+            st.caption("The filter requires maximum profit / maximum loss of at least 2.0, with defined maximum loss capped at $100. That cap could consume the entire $100 challenge balance; defined risk is not small risk. Historical coverage is the share of sampled past earnings whose three-session high/low range fit inside this setup's breakevens, based on at least four prior events. The 80th-percentile columns summarize those observed moves. The separate expiry probability remains an implied-volatility lognormal model estimate, not a backtested win rate. Neither measure guarantees future results. Price warnings are 1% inside each short strike; review if approached and use a three-session post-earnings time exit. This does not monitor IV, submit orders, or guarantee stop execution. Yahoo data may be delayed/incomplete; listed credit uses short bids and long asks, not an executable combo fill.")
 
 with tab6:
     st.subheader("$100 to $1,000 · free paper-trading challenge")
