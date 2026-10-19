@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 import yfinance as yf
 import manual_replication
+import earnings_condors
 
 st.set_page_config(page_title="Three Lens Market Dashboard", page_icon="📈", layout="wide")
 
@@ -343,7 +344,7 @@ if not results.empty:
     c.metric("Passing breakout + volume", f"{((results['Breakout'] == 'Yes') & (results['Volume confirms'] == 'Yes')).sum():,}")
     st.caption("Read the boxes left to right: symbols with data have price history; price/volume-qualified pass your sidebar filters; passing breakout + volume also need a 20-day-high breakout and today's volume at least 1.5× its recent average. A zero means none meet both checks today.")
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia inspired", "4 · Stock lookup", "5 · Options income scan", "6 · $100 paper challenge"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia inspired", "4 · Stock lookup", "5 · Options income scan", "6 · $100 paper challenge", "7 · Earnings iron condor alerts"])
 with tab1:
     st.subheader("Trader breakout rules")
     st.caption("A transparent approximation of the rules described in your pasted notes: trend, recent range breakout, momentum, and volume. It is not a reconstruction of a named trader's full system.")
@@ -526,6 +527,58 @@ with tab5:
         st.write("Profit probability is an estimate from the option's implied volatility using a simple lognormal expiration-price model with zero rates and dividends. It is not a guaranteed chance or a backtested win rate; actual returns can differ because prices move, volatility changes, quotes may be delayed, and execution costs/early assignment are not modeled. Public options educators describe Delta as a probability proxy, but this dashboard uses a separate breakeven-based model.")
         st.write("Premium uses the bid/ask midpoint, which may not be an executable fill. Premium yield is the midpoint per contract divided by the cash or shares required. Annualized yield simply scales that one-cycle yield by 365 ÷ days to expiration; it assumes the same yield could repeat and is not a forecast. Maximum loss assumes the stock can fall to zero. Contracts are ranked by modeled profit probability, then one-cycle premium yield—not by a hidden AI score.")
         st.markdown("Learn more: [Cash-secured puts](https://www.optionseducation.org/strategies/all-strategies/cash-secured-put) · [Covered calls](https://www.optionseducation.org/strategies/all-strategies/covered-call-buy-write) · [Options probability calculator](https://www.optionseducation.org/Options-Quotes-Calculators) · [OCC options risk disclosure](https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document)")
+
+with tab7:
+    st.subheader("Earnings iron condor alerts")
+    st.caption("Scans upcoming earnings among the most liquid stocks already loaded above. The probability is a constant-volatility model estimate for profit at expiration, not a backtested win rate or a guarantee. Earnings gaps can make actual outcomes much worse.")
+    st.warning("Research alerts only. No order is placed. A 4-leg iron condor has defined but potentially large loss; verify live quotes and earnings timing before any paper trade.")
+    with st.form("earnings_condor_form"):
+        condor_universe_size = st.select_slider("Most liquid stocks to check", options=[5, 10, 15, 20], value=10)
+        condor_min_oi = st.number_input("Minimum open interest per leg", min_value=1, value=50, step=25)
+        condor_max_spread = st.slider("Maximum leg quote spread (%)", min_value=5, max_value=50, value=35, step=5)
+        run_condor_scan = st.form_submit_button("Find earnings iron condor alerts", type="primary")
+    if run_condor_scan:
+        try:
+            if results.empty:
+                frame, scan_meta = pd.DataFrame(), {"checked": 0, "failures": 0}
+            else:
+                with st.spinner("Checking upcoming earnings and option chains for up to 20 liquid stocks…"):
+                    frame, scan_meta = earnings_condors.scan_universe(
+                        results, capital=min(100.0, float(capital)),
+                        max_symbols=int(condor_universe_size),
+                        min_open_interest=int(condor_min_oi),
+                        max_spread_pct=float(condor_max_spread),
+                    )
+            st.session_state["earnings_condor_rows"] = frame
+            st.session_state["earnings_condor_meta"] = scan_meta
+        except Exception as exc:
+            st.session_state["earnings_condor_rows"] = pd.DataFrame()
+            st.error(f"Earnings iron condor scan failed: {exc}")
+    if "earnings_condor_rows" in st.session_state:
+        frame = st.session_state["earnings_condor_rows"]
+        meta = st.session_state.get("earnings_condor_meta", {})
+        st.caption(f"Checked {meta.get('checked', 0)} tickers · option-chain failures: {meta.get('failures', 0)} · Source: Yahoo Finance. Only names in the loaded stock scan are checked.")
+        if frame.empty:
+            st.info("No suitable earnings iron condors were found in this scan. That can mean no upcoming earnings were returned, quotes were too wide or stale, or the defined risk exceeded the $5 challenge cap.")
+        else:
+            st.markdown("**Highest model-estimated chance of positive expiration P/L, with $5-risk-cap fits shown first**")
+            st.dataframe(frame, hide_index=True, use_container_width=True, column_config={
+                "Spot $": st.column_config.NumberColumn(format="$%.2f"),
+                "Short put $": st.column_config.NumberColumn(format="$%.2f"),
+                "Long put $": st.column_config.NumberColumn(format="$%.2f"),
+                "Short call $": st.column_config.NumberColumn(format="$%.2f"),
+                "Long call $": st.column_config.NumberColumn(format="$%.2f"),
+                "Credit / spread $": st.column_config.NumberColumn(format="$%.2f"),
+                "Max profit $": st.column_config.NumberColumn(format="$%.2f"),
+                "Max loss $": st.column_config.NumberColumn(format="$%.2f"),
+                "Lower breakeven $": st.column_config.NumberColumn(format="$%.2f"),
+                "Upper breakeven $": st.column_config.NumberColumn(format="$%.2f"),
+                "Est. expiry profit probability %": st.column_config.NumberColumn(format="%.1f%%"),
+                "ATM IV %": st.column_config.NumberColumn(format="%.1f%%"),
+                "Reward / max loss": st.column_config.NumberColumn(format="%.3f"),
+                "Risk cap $": st.column_config.NumberColumn(format="$%.2f"),
+            })
+            st.caption("The estimate uses the nearest liquid options' implied volatility and assumes a lognormal expiration price with zero drift. It ignores earnings jump behavior, commissions, early assignment, and multi-leg fill slippage. A high estimate is not proof of an edge. Yahoo quotes can be delayed or incomplete; the listed credit is a conservative leg-by-leg estimate, not a guaranteed combo fill.")
 
 with tab6:
     st.subheader("$100 to $1,000 · free paper-trading challenge")
