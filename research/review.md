@@ -1,16 +1,16 @@
 # Weekly paper strategy review
 
-Generated 2026-10-24T17:49:58.029712+00:00
+Generated 2026-10-25T12:51:52.460535+00:00
 Paper only. No strategy changes are applied automatically.
 
 | Period | Costs | Return % | Max DD % | Exit fills | SPY % |
 |---|---|---:|---:|---:|---:|
-| development | base | -1.606 | -3.009 | 8 | 15.545 |
-| development | stress | -2.352 | -3.372 | 8 | 15.084 |
-| holdout | base | -2.487 | -2.487 | 5 | 12.106 |
-| holdout | stress | -2.956 | -2.956 | 5 | 11.658 |
+| development | base | -1.606 | -3.009 | 8 | 16.189 |
+| development | stress | -2.352 | -3.372 | 8 | 15.725 |
+| holdout | base | -2.487 | -2.487 | 5 | 11.072 |
+| holdout | stress | -2.956 | -2.956 | 5 | 10.629 |
 
-Options: insufficient_data; 8200 archived observations; 0 filled exits.
+Options: insufficient_data; 8400 archived observations; 0 filled exits.
 At least 25 exits across distinct trades and adequate regime coverage are needed before drawing conclusions.
 
 ## Limitations
@@ -25,7 +25,7 @@ At least 25 exits across distinct trades and adequate regime coverage are needed
 ## Candidate comparison (research only)
 | Rule | Dev return % | Dev exits | Holdout return % | Stress return % |
 |---|---:|---:|---:|---:|
-| volume_1.2 | -2.267 | 12 | -3.727 | -4.932 |
+| volume_1.2 | -2.092 | 12 | -3.727 | -4.932 |
 | deployed_volume_1.5 | -1.606 | 8 | -2.487 | -2.956 |
 | volume_2.0 | -1.138 | 3 | 0.0 | 0.0 |
 
