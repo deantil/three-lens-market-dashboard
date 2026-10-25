@@ -1,5 +1,6 @@
 """Automatic official-source observations, kept separate from private paper fills."""
 from datetime import datetime, timezone
+import time
 
 STATE_URL = 'https://raw.githubusercontent.com/deantil/three-lens-market-dashboard/trader-state/trader_source_state.json'
 
@@ -11,7 +12,7 @@ def render_monitor():
 
     @st.cache_data(ttl=60, show_spinner=False)
     def published_state():
-        response=requests.get(STATE_URL,timeout=12)
+        response=requests.get(STATE_URL,params={'report_minute':int(time.time())//60},timeout=12)
         response.raise_for_status()
         data=response.json()
         if data.get('schema_version')!=1:
