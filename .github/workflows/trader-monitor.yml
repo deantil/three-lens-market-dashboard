@@ -1,0 +1,52 @@
+name: Project T official source monitor
+on:
+  push:
+    branches: [main]
+    paths: [trader_agent.py, '.github/workflows/trader-monitor.yml']
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: project-t-source-monitor
+  cancel-in-progress: false
+jobs:
+  collect-official-sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install --disable-pip-version-check requests
+      - name: Restore durable public-source observations
+        shell: bash
+        run: |
+          if git ls-remote --exit-code --heads origin trader-state; then
+            git fetch origin trader-state
+            git show FETCH_HEAD:trader_source_state.json > trader_source_state.json
+            python -c "import json; json.load(open('trader_source_state.json'))"
+          fi
+      - run: python -m unittest discover -s tests -p test_trader_agent.py -v
+      - name: Collect official public metadata only
+        run: python trader_agent.py
+      - name: Publish source state without touching paper bot ledger
+        shell: bash
+        run: |
+          cp trader_source_state.json "$RUNNER_TEMP/trader_source_state.json"
+          rm trader_source_state.json
+          if git ls-remote --exit-code --heads origin trader-state; then
+            git fetch origin trader-state
+            git checkout -B trader-state FETCH_HEAD
+          else
+            git checkout --orphan trader-state
+            git rm -rf .
+          fi
+          cp "$RUNNER_TEMP/trader_source_state.json" trader_source_state.json
+          git add trader_source_state.json
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Update official trader-source monitoring observations'
+          git push origin trader-state

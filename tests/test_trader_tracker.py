@@ -26,10 +26,13 @@ class TrackerTests(unittest.TestCase):
         self.assertIn("'=danger", export_csv([self.row() | {'notes': '=danger'}]))
 
     def test_ui_render_and_refresh(self):
+        import importlib.util
+        if importlib.util.find_spec('streamlit') is None:
+            self.skipTest('Streamlit UI test runs in the dashboard environment; collector CI uses requests only')
         from streamlit.testing.v1 import AppTest
-        app = AppTest.from_string('import trader_tracker\ntrader_tracker.render()', default_timeout=30).run()
+        app = AppTest.from_string('from unittest.mock import patch\nimport trader_tracker\nwith patch("trader_monitor_ui.render_monitor"), patch("trader_monitor_ui.render_trader_sections"):\n trader_tracker.render()', default_timeout=30).run()
         self.assertFalse(app.exception)
-        self.assertEqual(len(app.tabs), 4)
+        self.assertEqual(len(app.tabs), 6)
         app.button[0].click().run()
         self.assertFalse(app.exception)
         self.assertIn('trader_refreshed', app.session_state)

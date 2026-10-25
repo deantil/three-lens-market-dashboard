@@ -30,6 +30,18 @@ PROFILES = {
         'method': 'Use official current material, not old tastylive clips presented as new signals. Log only explicit contracts, entry times, quantities and exits; commentary stays research only.',
         'compatibility': 'Short-premium and multi-leg strategies are outside the current long-options simulator.',
     },
+    'Bruce Marshall': {
+        'url':'https://www.simplertrading.com/traders/bruce-marshall',
+        'source':'Official Simpler Trading free publications; Options Income Mastery member alerts/portfolio need authorized access.',
+        'method':'Monitor free official updates automatically. His official membership covers entries, adjustments and exits; a complete current portfolio is not publicly verified. Keep every spread leg and adjustment together.',
+        'compatibility':'Calendars, diagonals, butterflies and condors need full multi-leg risk accounting. Research only in the current long-option simulator.',
+    },
+    'CNBC Investing Club': {
+        'url':'https://www.cnbc.com/investingclub/',
+        'source':'Official CNBC public RSS where accessible; Charitable Trust open/closed lots are a subscriber feature.',
+        'method':'Track explicitly disclosed Trust transactions separately from Cramer commentary, watchlists and Bullpen ideas. The Trust is a stock portfolio, not an options-trader account. Full current holdings require authorized member access.',
+        'compatibility':'Public RSS access can be intermittent. No paywall workaround or complete holdings claim. Do not convert stock mentions into options trades.',
+    },
 }
 FIELDS = ['trade_id', 'trader', 'source_url', 'published_utc', 'received_utc', 'contract',
           'action', 'quantity', 'signal_limit', 'status', 'paper_entry', 'paper_exit', 'fees', 'notes']
@@ -103,10 +115,13 @@ def export_csv(rows):
 def render():
     import pandas as pd
     import streamlit as st
+    from trader_monitor_ui import render_monitor, render_trader_sections
 
     st.subheader('Options trader tracker')
-    st.caption('Paper research only · No trader feed or broker connected · Source information checked October 25, 2026')
-    st.info('Refresh reloads this session’s saved ledger. It does not fetch new trades from X or a paid service. Import authorized alerts or add a trade below.')
+    st.caption('Paper research only · Automatic official publication monitoring · No broker orders')
+    render_monitor()
+    st.markdown('### Your private paper-trade ledger')
+    st.caption('The automatic source report above is durable. Your personal fill records below remain private to this session. Ledger refresh does not fetch subscriber alerts.')
     st.warning('Your ledger is private to this browser session and can be lost when the session expires or the app restarts. Download it after updates and import it next time. Nothing is written to the public repository.')
     st.session_state.setdefault('trader_ledger', [])
     st.session_state.setdefault('trader_revision', 0)
@@ -134,6 +149,7 @@ def render():
     tabs = st.tabs(list(PROFILES))
     for tab, (name, profile) in zip(tabs, PROFILES.items()):
         with tab:
+            render_trader_sections(name)
             st.markdown(f'**Signal source:** {profile["source"]}')
             st.link_button('Open source / verify access', profile['url'])
             st.write(profile['method'])

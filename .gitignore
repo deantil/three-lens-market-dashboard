@@ -1,0 +1,7 @@
+__pycache__/
+*.png
+*.sqlite*
+.env*
+*token*.json
+*private*.json
+trader_source_state.json
