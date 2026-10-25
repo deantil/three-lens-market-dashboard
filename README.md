@@ -4,6 +4,10 @@ This repository powers the [Three Lens Market Dashboard](https://three-lens-mark
 
 ## What it does
 
+- **Tab 8: Options trader tracker**, with individual tabs for Alfredo Holguin, John Carter, Tony Saliba and Tom Sosnoff. Add or update authorized trade records, refresh the session ledger, and export/import CSV. No external trader feed, X API or Schwab broker connection is active. Source links and per-trader copying instructions distinguish verified access routes from unverified ones.
+- Tracker records live only in the current Streamlit session. Download after editing and import next visit. They are never committed to this public repository. Durable authenticated storage and authorized feed integrations remain future work. Refresh does not collect fresh external signals. Never upload proprietary alerts without the right to process them on this host.
+- Tracker P&L uses user-entered full-round-trip long-option fills, standard 100 multiplier, quantity and total fees; shorts, multi-leg trades and partial exits are excluded from that calculation. Status changes submit no orders. Existing paper bot rules are separate.
+
 - Scans US-listed stocks using the Nasdaq Trader listings, SPY holdings, or a personal watchlist.
 - Shows daily trend, breakout, momentum, and volume checks, plus a one-ticker lookup.
 - Includes an educational options-income shortlist for selected cash-secured puts and covered calls.

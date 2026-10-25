@@ -10,6 +10,7 @@ import streamlit as st
 import yfinance as yf
 import manual_replication
 import earnings_condors
+import trader_tracker
 
 st.set_page_config(page_title="Three Lens Market Dashboard", page_icon="📈", layout="wide")
 
@@ -344,7 +345,9 @@ if not results.empty:
     c.metric("Passing breakout + volume", f"{((results['Breakout'] == 'Yes') & (results['Volume confirms'] == 'Yes')).sum():,}")
     st.caption("Read the boxes left to right: symbols with data have price history; price/volume-qualified pass your sidebar filters; passing breakout + volume also need a 20-day-high breakout and today's volume at least 1.5× its recent average. A zero means none meet both checks today.")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia inspired", "4 · Stock lookup", "5 · Options income scan", "6 · $100 paper challenge", "7 · Earnings iron condor alerts"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia inspired", "4 · Stock lookup", "5 · Options income scan", "6 · $100 paper challenge", "7 · Earnings iron condor alerts", "8 · Options trader tracker"])
+with tab8:
+    trader_tracker.render()
 with tab1:
     st.subheader("Trader breakout rules")
     st.caption("A transparent approximation of the rules described in your pasted notes: trend, recent range breakout, momentum, and volume. It is not a reconstruction of a named trader's full system.")
