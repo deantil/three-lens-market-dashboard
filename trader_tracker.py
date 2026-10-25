@@ -115,12 +115,15 @@ def export_csv(rows):
 def render():
     import pandas as pd
     import streamlit as st
-    from trader_monitor_ui import render_monitor, render_trader_sections
+    from trader_monitor_ui import render_monitor, render_trader_sections, render_open_ledger
 
     st.subheader('Options trader tracker')
     st.caption('Paper research only · Automatic official publication monitoring · No broker orders')
     with st.expander('Automatic collector status and public research'):
         render_monitor()
+    st.markdown('### Open trade ledger · All monitored traders')
+    st.caption('Source-backed trader positions belong here. Your manually recorded paper trades are separate, inside each trader tab below.')
+    render_open_ledger()
     with st.expander('Save, restore or refresh your private paper ledger'):
         st.markdown('### Your private paper-trade ledger')
         st.caption('The automatic source report above is durable. Your personal fill records below remain private to this session. Ledger refresh does not fetch subscriber alerts.')
@@ -165,6 +168,7 @@ def render():
             st.caption('P&L uses operator-entered fills, total round-trip fees and a standard 100 multiplier. It excludes short options, spreads and partial exits. This is your paper ledger, not the trader’s verified return.')
             if not saved:
                 st.info('No trades recorded. No sample trades or performance have been invented.')
+            st.markdown('#### Your paper-trade journal · manual entry')
             with st.form('ledger_'+name):
                 frame = pd.DataFrame(saved, columns=FIELDS).astype(str)
                 edited = st.data_editor(frame, hide_index=True, num_rows='dynamic', use_container_width=True,

@@ -87,12 +87,10 @@ def render_trader_sections(name):
     import streamlit as st
     import pandas as pd
     data=st.session_state.get('trader_agent_report',{})
-    st.markdown('### 1 · Current disclosed trades / holdings')
+    st.markdown('### 1 · Open trade ledger')
     coverage=data.get('holdings_coverage',{}).get(name,{})
-    positions=[r for r in data.get('current_positions',[]) if r.get('trader')==name]
-    if positions:
-        st.dataframe(pd.DataFrame(positions),hide_index=True,use_container_width=True)
-    else:
+    render_open_ledger(name)
+    if not [r for r in data.get('current_positions',[]) if r.get('trader')==name]:
         st.warning('Current holdings are not publicly verified. No connected complete position source is available; this is not a statement that the trader has no positions.')
     st.caption('Holdings as of: '+str(coverage.get('as_of_utc') or 'Unknown')+' · Complete portfolio: '+('Yes' if coverage.get('complete') else 'Not established'))
     st.markdown('### 2 · New trade alerts')
@@ -119,3 +117,29 @@ def render_trader_sections(name):
                 hide_index=True,use_container_width=True,column_config={'Source':st.column_config.LinkColumn('Official source')})
         else:
             st.caption('No public items collected for this trader context yet.')
+
+POSITION_COLUMNS = ['Trader','Underlying','Option contract / stock','Action','Quantity',
+                    'Entry price','Opened UTC','Last confirmed UTC','Evidence','Verification']
+
+def open_position_rows(data, trader=None):
+    """Only explicit open-position records; never turn publication links into holdings."""
+    rows=[]
+    for record in data.get('current_positions',[]):
+        if trader and record.get('trader')!=trader:
+            continue
+        if record.get('status','open')!='open':
+            continue
+        rows.append(dict(zip(POSITION_COLUMNS,[record.get(field,'Not disclosed') for field in
+            ['trader','symbol','contract','action','quantity','entry_price','opened_utc',
+             'last_confirmed_utc','source_url','verification']])))
+    return rows
+
+def render_open_ledger(trader=None):
+    import streamlit as st
+    import pandas as pd
+    data=st.session_state.get('trader_agent_report',{})
+    rows=open_position_rows(data,trader)
+    st.dataframe(pd.DataFrame(rows,columns=POSITION_COLUMNS),hide_index=True,use_container_width=True,
+                 column_config={'Evidence':st.column_config.LinkColumn('Evidence')})
+    if not rows:
+        st.caption('No verified open-trade rows available. The table is intentionally empty; connected public sources have not established a current position ledger. This does not mean there are no open trades.')

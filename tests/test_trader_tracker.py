@@ -25,6 +25,15 @@ class TrackerTests(unittest.TestCase):
     def test_export_formula_protection(self):
         self.assertIn("'=danger", export_csv([self.row() | {'notes': '=danger'}]))
 
+    def test_open_ledger_never_uses_article_as_position(self):
+        from trader_monitor_ui import open_position_rows
+        self.assertEqual(open_position_rows({'items':[{'title':'We are buying'}]}),[])
+        data={'current_positions':[{'trader':'John Carter','contract':'TEST','status':'open'},
+                                  {'trader':'John Carter','contract':'OLD','status':'closed'}]}
+        rows=open_position_rows(data,'John Carter')
+        self.assertEqual(len(rows),1)
+        self.assertEqual(rows[0]['Quantity'],'Not disclosed')
+
     def test_ui_render_and_refresh(self):
         import importlib.util
         if importlib.util.find_spec('streamlit') is None:
@@ -33,6 +42,7 @@ class TrackerTests(unittest.TestCase):
         app = AppTest.from_string('from unittest.mock import patch\nimport trader_tracker\nwith patch("trader_monitor_ui.render_monitor"), patch("trader_monitor_ui.render_trader_sections"):\n trader_tracker.render()', default_timeout=30).run()
         self.assertFalse(app.exception)
         self.assertEqual(len(app.tabs), 6)
+        self.assertTrue(any('Open trade ledger · All monitored traders' in m.value for m in app.markdown))
         app.button[0].click().run()
         self.assertFalse(app.exception)
         self.assertIn('trader_refreshed', app.session_state)
