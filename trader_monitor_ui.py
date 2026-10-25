@@ -99,7 +99,10 @@ def render_trader_sections(name):
     alerts=[r for r in data.get('trade_alerts',[]) if r.get('trader')==name]
     if alerts:
         st.warning('These are detected trade-related source updates, not confirmed executions. Baseline items are historical discoveries, not newly taken trades. Follow the source to verify details; no holdings or orders are inferred.')
-        st.dataframe(pd.DataFrame(alerts),hide_index=True,use_container_width=True)
+        st.dataframe(pd.DataFrame([{'Update':r['title'],'Published UTC':r['published_utc'],
+            'Observed UTC':r['observed_utc'],'Status':r['alert_state'],
+            'Verification':r['classification'],'Source':r['source_url']} for r in alerts]),
+            hide_index=True,use_container_width=True,column_config={'Source':st.column_config.LinkColumn('Official source')})
     else:
         st.info('No verified new entry, exit or adjustment has been captured. Personal real-time trade feeds are not connected. Publication monitoring does not prove that no trade occurred.')
     st.caption('An alert needs trader identity, explicit trade intent, source publication time, observation time and contract details. Missing fields stay missing. A detected entry alone cannot establish current holdings without subsequent exits and adjustments.')

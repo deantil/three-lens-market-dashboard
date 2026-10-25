@@ -119,32 +119,34 @@ def render():
 
     st.subheader('Options trader tracker')
     st.caption('Paper research only · Automatic official publication monitoring · No broker orders')
-    render_monitor()
-    st.markdown('### Your private paper-trade ledger')
-    st.caption('The automatic source report above is durable. Your personal fill records below remain private to this session. Ledger refresh does not fetch subscriber alerts.')
-    st.warning('Your ledger is private to this browser session and can be lost when the session expires or the app restarts. Download it after updates and import it next time. Nothing is written to the public repository.')
-    st.session_state.setdefault('trader_ledger', [])
-    st.session_state.setdefault('trader_revision', 0)
-    if st.button('Refresh trader tracker', key='trader_refresh'):
-        st.session_state['trader_refreshed'] = datetime.now(timezone.utc).isoformat()
-    st.caption('Last manual refresh (UTC): ' + st.session_state.get('trader_refreshed', 'Not refreshed yet'))
-    upload = st.file_uploader('Restore/import authorized tracker CSV', type=['csv'], key='trader_import')
-    if st.button('Import CSV into this session', disabled=upload is None):
-        try:
-            if upload.size > 2_000_000:
-                raise ValueError('CSV limit is 2 MB.')
-            incoming = list(csv.DictReader(io.StringIO(upload.getvalue().decode('utf-8-sig'))))
-            combined = {r['trade_id']: r for r in st.session_state['trader_ledger']}
-            # Validate before merging, so duplicates in the import are rejected.
-            for row in validate(incoming):
-                combined[row['trade_id']] = row
-            st.session_state['trader_ledger'] = validate(list(combined.values()))
-            st.session_state['trader_revision'] += 1
-            st.success('Imported. Matching trade IDs were updated; other saved trades were retained.')
-        except (ValueError, UnicodeError) as exc:
-            st.error(str(exc))
-    st.download_button('Download saved tracker CSV', export_csv(st.session_state['trader_ledger']), 'options_trader_tracker.csv', 'text/csv')
-    st.download_button('Download blank CSV template', export_csv([]), 'trader_template.csv', 'text/csv')
+    with st.expander('Automatic collector status and public research'):
+        render_monitor()
+    with st.expander('Save, restore or refresh your private paper ledger'):
+        st.markdown('### Your private paper-trade ledger')
+        st.caption('The automatic source report above is durable. Your personal fill records below remain private to this session. Ledger refresh does not fetch subscriber alerts.')
+        st.warning('Your ledger is private to this browser session and can be lost when the session expires or the app restarts. Download it after updates and import it next time. Nothing is written to the public repository.')
+        st.session_state.setdefault('trader_ledger', [])
+        st.session_state.setdefault('trader_revision', 0)
+        if st.button('Refresh trader tracker', key='trader_refresh'):
+            st.session_state['trader_refreshed'] = datetime.now(timezone.utc).isoformat()
+        st.caption('Last manual refresh (UTC): ' + st.session_state.get('trader_refreshed', 'Not refreshed yet'))
+        upload = st.file_uploader('Restore/import authorized tracker CSV', type=['csv'], key='trader_import')
+        if st.button('Import CSV into this session', disabled=upload is None):
+            try:
+                if upload.size > 2_000_000:
+                    raise ValueError('CSV limit is 2 MB.')
+                incoming = list(csv.DictReader(io.StringIO(upload.getvalue().decode('utf-8-sig'))))
+                combined = {r['trade_id']: r for r in st.session_state['trader_ledger']}
+                # Validate before merging, so duplicates in the import are rejected.
+                for row in validate(incoming):
+                    combined[row['trade_id']] = row
+                st.session_state['trader_ledger'] = validate(list(combined.values()))
+                st.session_state['trader_revision'] += 1
+                st.success('Imported. Matching trade IDs were updated; other saved trades were retained.')
+            except (ValueError, UnicodeError) as exc:
+                st.error(str(exc))
+        st.download_button('Download saved tracker CSV', export_csv(st.session_state['trader_ledger']), 'options_trader_tracker.csv', 'text/csv')
+        st.download_button('Download blank CSV template', export_csv([]), 'trader_template.csv', 'text/csv')
 
     tabs = st.tabs(list(PROFILES))
     for tab, (name, profile) in zip(tabs, PROFILES.items()):
