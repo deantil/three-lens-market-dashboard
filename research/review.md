@@ -1,6 +1,6 @@
 # Weekly paper strategy review
 
-Generated 2026-10-25T12:51:52.460535+00:00
+Generated 2026-10-25T23:50:40.922462+00:00
 Paper only. No strategy changes are applied automatically.
 
 | Period | Costs | Return % | Max DD % | Exit fills | SPY % |
