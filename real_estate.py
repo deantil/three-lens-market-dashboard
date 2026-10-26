@@ -79,6 +79,9 @@ def blockers(p, m, now=None):
 def render():
     import pandas as pd
     import streamlit as st
+    def prose(text):
+        st.markdown(text.replace("$", "\\$"))
+
     data = load_data()
     st.header('Real Estate Investments')
     st.caption('Purdue • Michigan State • Case Western markets | USD | No guaranteed returns')
@@ -86,7 +89,7 @@ def render():
             'Total purchase debt is 100% of price; the HELOC also puts existing home equity at risk.')
     st.caption(f"Evidence reviewed {data['reviewed_at']}. Page reloads do not refresh property evidence. "
                'Verified evidence expires after 7 days. Listing observations can change sooner.')
-    st.markdown('**Strict criteria:** 2–3 bedrooms; condo/townhome; built 2001+; active; unrestricted investor rentals; '
+    prose('**Strict criteria:** 2–3 bedrooms; condo/townhome; built 2001+; active; unrestricted investor rentals; '
                 'documented safety review; verified rent comps, tax and HOA; ≥$250/month after both loans; '
                 '$30k–$40k savings including closing, repairs and reserves. HOA ≤$200 is a preference, as requested. '
                 'NOI DSCR ≥1.20 is an explicit screening convention; lender acceptance must also be documented.')
@@ -100,9 +103,9 @@ def render():
     if not qualified:
         st.warning('0 strictly qualified properties. No threshold has been lowered to populate this section.')
     else:
-        for p in qualified: st.write(p['address'])
+        for p in qualified: prose(p['address'])
     st.subheader('2 · Lowest Cost / Highest ROI')
-    st.write('Research candidates only. Rankings compare stated rent/cost scenarios, not verified achievable returns or the entire market.')
+    prose('Research candidates only. Rankings compare stated rent/cost scenarios, not verified achievable returns or the entire market.')
     order = st.radio('Rank candidates', ['Scenario cash-on-cash (highest first)', 'Purchase price (lowest first)'], horizontal=True)
     rows.sort(key=(lambda x: -x[1]['cash_on_cash']) if order.startswith('Scenario') else lambda x: x[1]['price'])
     summary = []
@@ -116,12 +119,12 @@ def render():
     st.download_button('Download scenario comparison CSV', pd.DataFrame(summary).to_csv(index=False), 'real-estate-scenarios.csv', 'text/csv')
     for p, m, failures in rows:
         with st.expander(f"{p['address']} · ${p['price']:,} · NOT QUALIFIED" if failures else p['address']):
-            st.markdown(f"[Sale listing]({p['listing_url']}) · {p['beds']} bedrooms · {p['property_type']} · reported year {p['year']}")
-            st.write(p['notes'])
+            prose(f"[Sale listing]({p['listing_url']}) · {p['beds']} bedrooms · {p['property_type']} · reported year {p['year']}")
+            prose(p['notes'])
             st.warning('Qualification blockers: ' + '; '.join(failures)) if failures else st.success('All gates passed')
             if p['hoa_scenario'] > 200: st.caption('HOA exceeds the preferred $200/month ceiling.')
-            st.write('Rent evidence: ' + p['rent_notes'])
-            st.write('Tax/HOA caveats: ' + p['tax_hoa_notes'])
+            prose('Rent evidence: ' + p['rent_notes'])
+            prose('Tax/HOA caveats: ' + p['tax_hoa_notes'])
             financing = {'Purchase price':m['price'], 'HELOC draw':m['heloc'], 'Mortgage':m['mortgage'],
                          'Total debt (both loans)':m['total_debt'], 'Savings cash allocated':m['savings'],
                          'Closing/loan costs (4% estimate)':m['closing'], 'Initial repair/furnishing estimate':m['initial_repairs'],
@@ -135,7 +138,7 @@ def render():
                      'Other / license / assessment contingency':p['other_scenario'], 'Mortgage P&I':m['pi'],
                      'HELOC interest':m['heloc_interest'], 'Net monthly cash flow':m['cash_flow']}
             st.dataframe(pd.DataFrame([{'Monthly income / cost':k,'USD':round(v,2)} for k,v in costs.items()]), hide_index=True)
-            st.write(f"NOI cap rate {m['cap_rate']:.2%}; cash-on-cash {m['cash_on_cash']:.2%}; "
+            prose(f"NOI cap rate {m['cap_rate']:.2%}; cash-on-cash {m['cash_on_cash']:.2%}; "
                      f"NOI/mortgage DSCR {m['dscr']:.2f}; cash NOI/both loans {m['combined_dscr']:.2f}; "
                      f"gross rent/PITIA {m['lender_ratio']:.2f} (lenders use different definitions). "
                      f"Break-even rent ${m['break_even']:,.0f}; rent for $250 cash flow ${m['target_rent']:,.0f}.")
@@ -156,17 +159,17 @@ def render():
                        'Net sale equity excludes retained savings reserves; negative means more cash required. '
                        'The final column is pre-tax economic change before selling costs, not realized profit or CoC.')
             stressed=analyze(p,m['rent']*.9)
-            st.write(f"10% rent reduction: ${stressed['cash_flow']:,.0f}/month cash flow. "
+            prose(f"10% rent reduction: ${stressed['cash_flow']:,.0f}/month cash flow. "
                      f"HELOC +2 percentage points: ${m['cash_flow']-m['heloc']*.02/12:,.0f}/month. "
                      'A $5,000 special assessment reduces annual cash flow by $5,000.')
-            st.markdown('**Evidence register — a public listing report is not independent verification**')
+            prose('**Evidence register — a public listing report is not independent verification**')
             for field, ev in p['evidence'].items():
                 link=f"[source]({ev['url']})" if ev.get('url') else 'No supporting document obtained'
-                st.markdown(f"- **{field} — {ev['status']}**: {ev['detail']} · {link} · {ev.get('observed_at', 'not checked')}")
+                prose(f"- **{field} — {ev['status']}**: {ev['detail']} · {link} · {ev.get('observed_at', 'not checked')}")
     with st.expander('Update evidence / methodology / research limitations'):
-        st.write(data['update_instructions'])
+        prose(data['update_instructions'])
         st.download_button('Download full evidence JSON', json.dumps(data,indent=2), 'real-estate-evidence.json','application/json')
-        st.write('No broker/HOA replies or lender approval were obtained. Public-record portals were located but parcel bills and governing documents '
+        prose('No broker/HOA replies or lender approval were obtained. Public-record portals were located but parcel bills and governing documents '
                  'were not retrieved. There is no connected phone/HOA document feed. Missing evidence blocks qualification. '
                  'Safety remains unknown until dated official incident data, geography and physical risk review are documented; '
                  'schools, demographics and marketing descriptions are not safety proxies.')
