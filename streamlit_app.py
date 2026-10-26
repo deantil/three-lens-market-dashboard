@@ -346,7 +346,21 @@ if not results.empty:
     c.metric("Passing breakout + volume", f"{((results['Breakout'] == 'Yes') & (results['Volume confirms'] == 'Yes')).sum():,}")
     st.caption("Read the boxes left to right: symbols with data have price history; price/volume-qualified pass your sidebar filters; passing breakout + volume also need a 20-day-high breakout and today's volume at least 1.5× its recent average. A zero means none meet both checks today.")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia inspired", "4 · Stock lookup", "5 · Options income scan", "6 · $100 paper challenge", "7 · Earnings iron condor alerts", "8 · Options trader tracker", "9 · Real Estate Investments"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia inspired", "4 · Stock lookup", "5 · Options income scan", "6 · $100 paper challenge", "7 · Earnings iron condor alerts", "8 · Options trader tracker", "9 · Real Estate Investments", "10 · Guaranteed Rent"])
+with tab10:
+    import streamlit.components.v1 as components
+
+    rent_dashboard_url = "https://rent-sourcing-observatory.snowytern2.chatgpt.site/"
+    st.header("Guaranteed Rent · Daily Sourcing")
+    st.caption("Canada student-housing leasebacks · US model-home leasebacks · UAE guaranteed-rent condos · India pre-leased commercial and assured-rent units. UK excluded.")
+    st.write("The live table below shares the daily sourcing agent's records, evidence history, ranking and inquiry queue. The agent searches for new options and reviews existing listings every day at 8 a.m. Eastern, targeting USD 25,000–50,000 upfront. See Refresh activity in the embedded dashboard for actual completed runs and failures.")
+    st.link_button("Open private dashboard / sign in with ChatGPT", rent_dashboard_url)
+    st.caption("Access remains private. If the embedded view asks you to sign in, use the link above in a full browser tab. If your browser blocks embedded sign-in or cookies, use that full-page view. No access token or private inquiry data is stored in this Streamlit app.")
+    if st.button("Reload live guaranteed-rent table", key="reload_rent_observatory"):
+        st.session_state["rent_observatory_reload"] = st.session_state.get("rent_observatory_reload", 0) + 1
+    reload_version = st.session_state.get("rent_observatory_reload", 0)
+    components.iframe(f"{rent_dashboard_url}?view=streamlit&reload={reload_version}", height=1050, scrolling=True)
+    st.info("Advertised guarantees require verification. Unknown financing, costs and cashflow stay unknown. Inquiry drafts need explicit approval before any email is sent. No investments are committed automatically.")
 with tab9:
     real_estate.render()
 with tab8:
@@ -720,5 +734,6 @@ with tab6:
 with st.expander("How sizing and the goal tracker work"):
     st.write(f"Risk budget per trade is ${capital * risk_pct / 100:,.2f} at the selected {risk_pct:.2f}% account risk. Reference stops use the lower of the recent 10-day low or a 6% reference distance. Share counts are capped so the position value does not exceed the account balance. Actual fills, gaps, fees, and losses can differ substantially.")
     st.write("A $1,000 to $10,000 year-end target requires an exceptionally high compounded return, especially late in the year. The dashboard shows the arithmetic pace only; it does not predict or promise that outcome.")
+
 
 
