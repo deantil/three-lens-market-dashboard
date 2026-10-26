@@ -1,0 +1,452 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-26T13:21:25Z",
+  "properties": [
+    {
+      "id": "649",
+      "address": "649 Worthington Dr #5, Lansing, MI",
+      "price": 168900,
+      "beds": 2,
+      "property_type": "condo",
+      "year": 2005,
+      "listing_url": "https://www.homes.com/property/649-worthington-dr-lansing-mi-unit-5/rvx9569xlhr5f/",
+      "listing_status": "active",
+      "unrestricted_rentals": null,
+      "safety_pass": null,
+      "rent_scenario": 1700,
+      "tax_scenario": 4577,
+      "hoa_scenario": 360,
+      "insurance_scenario": 125,
+      "utilities_scenario": 50,
+      "other_scenario": 50,
+      "notes": "Listing reports current reduced price. Association: East Village Condominium. No governing rental documents obtained.",
+      "rent_notes": "Rent is an analyst scenario. Nearby 635 Worthington rental page located, but no current comparable signed lease verified.",
+      "tax_hoa_notes": "Annual tax $4,577 reported by listing; a separate Zillow record shows older $3,250. Model uses $4,577, not a verified post-transfer tax bill. Michigan taxable value may uncap after transfer.",
+      "evidence": {
+        "identity": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Parcel/unit identity not independently matched to county record."
+        },
+        "year": {
+          "status": "reported",
+          "url": "https://www.homes.com/property/649-worthington-dr-lansing-mi-unit-5/rvx9569xlhr5f/",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Listing reports 2005; county construction record not obtained."
+        },
+        "status": {
+          "status": "reported",
+          "url": "https://www.homes.com/property/649-worthington-dr-lansing-mi-unit-5/rvx9569xlhr5f/",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Public portal reports active; no direct current MLS confirmation."
+        },
+        "rental_rules": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No current declaration, bylaws, amendments, rental cap or written HOA confirmation obtained."
+        },
+        "safety": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No dated official incident analysis or physical site risk review completed."
+        },
+        "rent_comps": {
+          "status": "missing",
+          "url": "https://www.apartments.com/635-worthington-dr-lansing-mi/x1mb1wq/",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Rent is an analyst scenario. Nearby 635 Worthington rental page located, but no current comparable signed lease verified."
+        },
+        "tax": {
+          "status": "unverified",
+          "url": "https://www.homes.com/property/649-worthington-dr-lansing-mi-unit-5/rvx9569xlhr5f/",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Annual tax $4,577 reported by listing; a separate Zillow record shows older $3,250. Model uses $4,577, not a verified post-transfer tax bill. Michigan taxable value may uncap after transfer."
+        },
+        "hoa": {
+          "status": "reported",
+          "url": "https://www.homes.com/property/649-worthington-dr-lansing-mi-unit-5/rvx9569xlhr5f/",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Listing-reported $360.00/month; no association budget, dues statement or assessment certificate obtained."
+        },
+        "insurance": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "$125/month scenario; no landlord/HO6 or loss-assessment quote obtained."
+        },
+        "condition": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "$2,500 initial repair allowance; no inspection or contractor bid."
+        },
+        "lender": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No lender acceptance of borrowed down payment, DSCR definition, condo eligibility or loan costs documented."
+        }
+      }
+    },
+    {
+      "id": "623",
+      "address": "623 Worthington Dr #34, Lansing, MI",
+      "price": 169000,
+      "beds": 2,
+      "property_type": "condo",
+      "year": 2006,
+      "listing_url": "https://www.trulia.com/home/623-worthington-dr-lansing-mi-48906-94761198",
+      "listing_status": "active",
+      "unrestricted_rentals": null,
+      "safety_pass": null,
+      "rent_scenario": 1600,
+      "tax_scenario": 5000,
+      "hoa_scenario": 375,
+      "insurance_scenario": 125,
+      "utilities_scenario": 50,
+      "other_scenario": 50,
+      "notes": "Trulia displays Active and $169,000. HOA contact published in listing: 248-769-7408; no call or reply obtained.",
+      "rent_notes": "Rent is an analyst scenario, not a comp. Zillow automated estimate around $1,602 is not a verified rent comp.",
+      "tax_hoa_notes": "Older Zillow tax $4,043 for 2024; modeled $5,000/year is a stress allowance, not a county-confirmed non-homestead/uncapped tax calculation. HOA $375 reported by listing.",
+      "evidence": {
+        "identity": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Parcel/unit identity not independently matched to county record."
+        },
+        "year": {
+          "status": "reported",
+          "url": "https://www.trulia.com/home/623-worthington-dr-lansing-mi-48906-94761198",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Listing reports 2006; county construction record not obtained."
+        },
+        "status": {
+          "status": "reported",
+          "url": "https://www.trulia.com/home/623-worthington-dr-lansing-mi-48906-94761198",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Public portal reports active; no direct current MLS confirmation."
+        },
+        "rental_rules": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No current declaration, bylaws, amendments, rental cap or written HOA confirmation obtained."
+        },
+        "safety": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No dated official incident analysis or physical site risk review completed."
+        },
+        "rent_comps": {
+          "status": "missing",
+          "url": "https://www.apartments.com/635-worthington-dr-lansing-mi/x1mb1wq/",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Rent is an analyst scenario, not a comp. Zillow automated estimate around $1,602 is not a verified rent comp."
+        },
+        "tax": {
+          "status": "unverified",
+          "url": "https://www.trulia.com/home/623-worthington-dr-lansing-mi-48906-94761198",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Older Zillow tax $4,043 for 2024; modeled $5,000/year is a stress allowance, not a county-confirmed non-homestead/uncapped tax calculation. HOA $375 reported by listing."
+        },
+        "hoa": {
+          "status": "reported",
+          "url": "https://www.trulia.com/home/623-worthington-dr-lansing-mi-48906-94761198",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Listing-reported $375.00/month; no association budget, dues statement or assessment certificate obtained."
+        },
+        "insurance": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "$125/month scenario; no landlord/HO6 or loss-assessment quote obtained."
+        },
+        "condition": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "$2,500 initial repair allowance; no inspection or contractor bid."
+        },
+        "lender": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No lender acceptance of borrowed down payment, DSCR definition, condo eligibility or loan costs documented."
+        }
+      }
+    },
+    {
+      "id": "3718",
+      "address": "3718 Minster Ct, Cleveland, OH",
+      "price": 189000,
+      "beds": 3,
+      "property_type": "townhome",
+      "year": 2009,
+      "listing_url": "https://www.redfin.com/OH/Cleveland/3718-Minster-Ct-44105/home/66239703",
+      "listing_status": "active",
+      "unrestricted_rentals": null,
+      "safety_pass": null,
+      "rent_scenario": 1800,
+      "tax_scenario": 4000,
+      "hoa_scenario": 144.32,
+      "insurance_scenario": 125,
+      "utilities_scenario": 50,
+      "other_scenario": 50,
+      "notes": "Current MLS #5253913 is a relisting; old MLS #5216157 sold September 2026. Do not use old $126,000 price. Parcel 132-08-055.",
+      "rent_notes": "Rent $1,800 is an analyst scenario. The 2014 $800 advertisement is obsolete and excluded as a current comp.",
+      "tax_hoa_notes": "Current Redfin HOA $144.32; old brokerage listing said no HOA. Listing tax $174/$175 appears inconsistent with value and may reflect incomplete improvements. Model uses $4,000 stress estimate pending county bill. Year 2009 listing vs third-party record 2013 conflict.",
+      "evidence": {
+        "identity": {
+          "status": "missing",
+          "url": "https://myplace.cuyahogacounty.gov/?searchMethod=parcel&parcelId=13208055",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Parcel/unit identity not independently matched to county record."
+        },
+        "year": {
+          "status": "reported",
+          "url": "https://www.redfin.com/OH/Cleveland/3718-Minster-Ct-44105/home/66239703",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Listing reports 2009; county construction record not obtained."
+        },
+        "status": {
+          "status": "reported",
+          "url": "https://www.redfin.com/OH/Cleveland/3718-Minster-Ct-44105/home/66239703",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Public portal reports active; no direct current MLS confirmation."
+        },
+        "rental_rules": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No current declaration, bylaws, amendments, rental cap or written HOA confirmation obtained."
+        },
+        "safety": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No dated official incident analysis or physical site risk review completed."
+        },
+        "rent_comps": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Rent $1,800 is an analyst scenario. The 2014 $800 advertisement is obsolete and excluded as a current comp."
+        },
+        "tax": {
+          "status": "unverified",
+          "url": "https://www.redfin.com/OH/Cleveland/3718-Minster-Ct-44105/home/66239703",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Current Redfin HOA $144.32; old brokerage listing said no HOA. Listing tax $174/$175 appears inconsistent with value and may reflect incomplete improvements. Model uses $4,000 stress estimate pending county bill. Year 2009 listing vs third-party record 2013 conflict."
+        },
+        "hoa": {
+          "status": "reported",
+          "url": "https://www.redfin.com/OH/Cleveland/3718-Minster-Ct-44105/home/66239703",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Listing-reported $144.32/month; no association budget, dues statement or assessment certificate obtained."
+        },
+        "insurance": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "$125/month scenario; no landlord/HO6 or loss-assessment quote obtained."
+        },
+        "condition": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "$2,500 initial repair allowance; no inspection or contractor bid."
+        },
+        "lender": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No lender acceptance of borrowed down payment, DSCR definition, condo eligibility or loan costs documented."
+        }
+      }
+    },
+    {
+      "id": "2708",
+      "address": "2708 Martin Luther King Jr Dr, Cleveland, OH",
+      "price": 255000,
+      "beds": 2,
+      "property_type": "townhome",
+      "year": 2005,
+      "listing_url": "https://www.trulia.com/home/2708-martin-luther-king-jr-dr-cleveland-oh-44104-71966936",
+      "listing_status": "active",
+      "unrestricted_rentals": null,
+      "safety_pass": null,
+      "rent_scenario": 2200,
+      "tax_scenario": 2368,
+      "hoa_scenario": 0,
+      "insurance_scenario": 125,
+      "utilities_scenario": 50,
+      "other_scenario": 50,
+      "notes": "Sale portals report $255,000 after August price reductions; older broker page still shows $275,000. No executed sale contract/status feed.",
+      "rent_notes": "Unfurnished long-term rent $2,200 is an analyst scenario. Furnished Finder advertises $2,795 including utilities and 1-month minimum; different product, not a signed lease or evidence for $2,200.",
+      "tax_hoa_notes": "Broker IDX reports 2025 tax $2,368. No county bill retrieved. $0 HOA is a scenario from listing absence, not confirmation of no association or deed restrictions.",
+      "evidence": {
+        "identity": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Parcel/unit identity not independently matched to county record."
+        },
+        "year": {
+          "status": "reported",
+          "url": "https://www.trulia.com/home/2708-martin-luther-king-jr-dr-cleveland-oh-44104-71966936",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Listing reports 2005; county construction record not obtained."
+        },
+        "status": {
+          "status": "reported",
+          "url": "https://www.trulia.com/home/2708-martin-luther-king-jr-dr-cleveland-oh-44104-71966936",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Public portal reports active; no direct current MLS confirmation."
+        },
+        "rental_rules": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No current declaration, bylaws, amendments, rental cap or written HOA confirmation obtained."
+        },
+        "safety": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No dated official incident analysis or physical site risk review completed."
+        },
+        "rent_comps": {
+          "status": "missing",
+          "url": "https://www.furnishedfinder.com/property/1056227_1",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Unfurnished long-term rent $2,200 is an analyst scenario. Furnished Finder advertises $2,795 including utilities and 1-month minimum; different product, not a signed lease or evidence for $2,200."
+        },
+        "tax": {
+          "status": "unverified",
+          "url": "https://www.advgroupagents.com/property-search/detail/169/5231512/2708-martin-luther-king-jr-dr-cleveland-oh-44104/",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Broker IDX reports 2025 tax $2,368. No county bill retrieved. $0 HOA is a scenario from listing absence, not confirmation of no association or deed restrictions."
+        },
+        "hoa": {
+          "status": "reported",
+          "url": "https://www.trulia.com/home/2708-martin-luther-king-jr-dr-cleveland-oh-44104-71966936",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Listing-reported $0.00/month; no association budget, dues statement or assessment certificate obtained."
+        },
+        "insurance": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "$125/month scenario; no landlord/HO6 or loss-assessment quote obtained."
+        },
+        "condition": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "$2,500 initial repair allowance; no inspection or contractor bid."
+        },
+        "lender": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No lender acceptance of borrowed down payment, DSCR definition, condo eligibility or loan costs documented."
+        }
+      }
+    },
+    {
+      "id": "3216",
+      "address": "3216 Kildaire Dr, West Lafayette, IN",
+      "price": 224000,
+      "beds": 3,
+      "property_type": "condo",
+      "year": 2007,
+      "listing_url": "https://www.homes.com/property/3216-kildaire-dr-west-lafayette-in/lszpmx056rzyr/",
+      "listing_status": "conflicting/pending",
+      "unrestricted_rentals": null,
+      "safety_pass": null,
+      "rent_scenario": 1900,
+      "tax_scenario": 4480,
+      "hoa_scenario": 275,
+      "insurance_scenario": 125,
+      "utilities_scenario": 50,
+      "other_scenario": 50,
+      "notes": "Homes.com history shows pending October 6, 2026 while Redfin displays for sale. Excluded from qualified. Unit identity must be reconciled: separate unit 1D page reports 2004, not listing 2007.",
+      "rent_notes": "Rent $1,900 is an analyst scenario; no verified like-for-like lease comps obtained.",
+      "tax_hoa_notes": "Tax $4,480 is a 2%-of-price scenario, not a verified tax cap or bill. Unit 1D tax figures must not be assigned to this listing without parcel match. HOA $275 is listing-reported.",
+      "evidence": {
+        "identity": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Parcel/unit identity not independently matched to county record."
+        },
+        "year": {
+          "status": "conflicting",
+          "url": "https://www.homes.com/property/3216-kildaire-dr-west-lafayette-in/lszpmx056rzyr/",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Listing reports 2007; county construction record not obtained."
+        },
+        "status": {
+          "status": "conflicting",
+          "url": "https://www.homes.com/property/3216-kildaire-dr-west-lafayette-in/lszpmx056rzyr/",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Public portal reports conflicting/pending; no direct current MLS confirmation."
+        },
+        "rental_rules": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No current declaration, bylaws, amendments, rental cap or written HOA confirmation obtained."
+        },
+        "safety": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No dated official incident analysis or physical site risk review completed."
+        },
+        "rent_comps": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Rent $1,900 is an analyst scenario; no verified like-for-like lease comps obtained."
+        },
+        "tax": {
+          "status": "unverified",
+          "url": "https://www.homes.com/property/3216-kildaire-dr-west-lafayette-in/lszpmx056rzyr/",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Tax $4,480 is a 2%-of-price scenario, not a verified tax cap or bill. Unit 1D tax figures must not be assigned to this listing without parcel match. HOA $275 is listing-reported."
+        },
+        "hoa": {
+          "status": "conflicting",
+          "url": "https://www.homes.com/property/3216-kildaire-dr-west-lafayette-in/lszpmx056rzyr/",
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "Listing-reported $275.00/month; no association budget, dues statement or assessment certificate obtained."
+        },
+        "insurance": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "$125/month scenario; no landlord/HO6 or loss-assessment quote obtained."
+        },
+        "condition": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "$2,500 initial repair allowance; no inspection or contractor bid."
+        },
+        "lender": {
+          "status": "missing",
+          "url": null,
+          "observed_at": "2026-10-26T13:21:25Z",
+          "detail": "No lender acceptance of borrowed down payment, DSCR definition, condo eligibility or loan costs documented."
+        }
+      }
+    }
+  ],
+  "update_instructions": "Manual evidence update: edit real_estate_data.json in deantil/three-lens-market-dashboard. For each field retain its source URL, actual observation timestamp, status and concise finding. Only use verified after obtaining the matching primary document (county parcel/bill, current HOA governing documents and written rental/dues confirmation, comparable leases, insurance/inspection and lender approval). Reconcile conflicts; update numeric scenarios to match evidence. Record reviewed_at only after reviewing sources. Run python -m unittest discover -s tests -p test_real_estate.py and commit/push reviewed changes to main; Streamlit redeploys from main. Reload page to load the deployed JSON. No automatic listing scraper or broker outreach is configured. Link availability alone never refreshes a fact or verifies eligibility. Verified evidence older than 7 days is blocked automatically. Official record routes: https://www.lansingmi.gov/city-assessor and https://myplace.cuyahogacounty.gov/ . Michigan transfer guidance: https://www.michigan.gov/documents/treasury/TransferOwnershipGuidelines_423898_7.pdf ."
+}

@@ -120,3 +120,14 @@ A standard equity option contract generally represents 100 shares. The challenge
 
 The $1,000 target is a challenge goal for paper tracking, not a forecast. Past or simulated results do not guarantee future outcomes.
 
+
+
+## Real Estate Investments (Tab 9)
+
+`real_estate.py` screens `real_estate_data.json` separately from all trading systems. Fixed financing is 25% borrowed HELOC down payment at 9% interest-only and 75% mortgage at 7.5%/30 years. Both debts count in cash flow. The tab shows Strictly Qualified (currently zero) and five research candidates sortable by scenario CoC or purchase price. These are not verified investment recommendations.
+
+Monthly operating assumptions: 5% vacancy, 8% management, 5% repairs, 5% capital replacements and 3% leasing/turnover, plus property-specific tax/HOA/insurance/utilities/other contingencies. Closing/loan costs are estimated at 4%; initial repairs at $2,500. Savings allocation is at least $30,000, retaining at least six months of carrying costs; >$40,000 fails. Actual costs and lender terms may be higher. HOA <=$200 is a preference, not a hard limit. NOI DSCR 1.20 is a disclosed screening floor plus a separate lender-document gate, not a claim of approval.
+
+All required evidence must be verified with a source URL and actual observation timestamp, no older than seven days. Missing, conflicting, reported, stale or future-dated evidence fails. Current rental rules, objective safety review, rent comps, county tax/parcel records, HOA documents and lender acceptance have not been obtained; no candidate qualifies. The tax/HOA conflicts and pending Kildaire status are shown explicitly. Reported sale listings do not establish investment eligibility. Unfurnished rent scenarios are assumptions; the $2,795 furnished/utilities-included advertisement is not substituted for a long-term lease comp.
+
+Manual update: review primary documents and live listing status, edit the JSON evidence and numeric scenarios, preserve source links and timestamps, run `python -m unittest discover -s tests -p test_real_estate.py -v`, then commit/push to main. The existing Streamlit deployment loads the committed JSON; page reloads do not collect fresh listing evidence. No automated property collector or broker/HOA outreach is active. Evidence JSON and scenario CSV can be downloaded in the tab. Reconcile parcel identity and buyer tax reassessment/uncapping before marking tax verified.
