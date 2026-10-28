@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "last_run_utc": "2026-10-28T14:24:26.354592+00:00",
+  "last_run_utc": "2026-10-28T19:49:09.382275+00:00",
   "expected_interval_minutes": 15,
-  "new_items_this_run": 0,
+  "new_items_this_run": 7,
   "sources": [
     {
       "source_id": "holguin-history",
       "trader": "Alfredo Holguin",
       "url": "https://holguintrades.com/stats/trade-history",
-      "checked_utc": "2026-10-28T14:24:26.354592+00:00",
+      "checked_utc": "2026-10-28T19:49:09.382275+00:00",
       "note": "Public history availability only. No trade data copied: source terms restrict storage without consent. Live SMS access is not connected.",
       "status": "available",
       "items_returned": 0
@@ -17,7 +17,7 @@
       "source_id": "carter-rss",
       "trader": "John Carter",
       "url": "https://www.simplertrading.com/feed/",
-      "checked_utc": "2026-10-28T14:24:26.354592+00:00",
+      "checked_utc": "2026-10-28T19:49:09.382275+00:00",
       "note": "Official team publication feed. Items are not attributed to Carter unless explicitly authored by him; not a live trade service.",
       "status": "empty",
       "items_returned": 0
@@ -26,7 +26,7 @@
       "source_id": "carter-blog",
       "trader": "John Carter",
       "url": "https://www.simplertrading.com/blog",
-      "checked_utc": "2026-10-28T14:24:26.354592+00:00",
+      "checked_utc": "2026-10-28T19:49:09.382275+00:00",
       "note": "Official team article links. Education and research only; team articles are not Carter trade executions.",
       "status": "ok",
       "items_returned": 17
@@ -35,7 +35,7 @@
       "source_id": "saliba-news",
       "trader": "Tony Saliba",
       "url": "https://www.liquidmercury.com/news/rss.xml",
-      "checked_utc": "2026-10-28T14:24:26.354592+00:00",
+      "checked_utc": "2026-10-28T19:49:09.382275+00:00",
       "note": "Official company news metadata, not Saliba personal trades.",
       "status": "ok",
       "items_returned": 50
@@ -44,7 +44,7 @@
       "source_id": "sosnoff-appearances",
       "trader": "Tom Sosnoff",
       "url": "https://www.moneyshow.com/expert/e9e385ec29154496a19c8490b9fad291/",
-      "checked_utc": "2026-10-28T14:24:26.354592+00:00",
+      "checked_utc": "2026-10-28T19:49:09.382275+00:00",
       "note": "Public appearance links, not a current live trade feed. Undated videos stay undated.",
       "status": "ok",
       "items_returned": 4
@@ -53,7 +53,7 @@
       "source_id": "bruce-free-updates",
       "trader": "Bruce Marshall",
       "url": "https://www.simplertrading.com/daily/options-free",
-      "checked_utc": "2026-10-28T14:24:26.354592+00:00",
+      "checked_utc": "2026-10-28T19:49:09.382275+00:00",
       "note": "Official team free-video links; author attribution is not established by this listing. Not Bruce personal executions or holdings.",
       "status": "ok",
       "items_returned": 10
@@ -62,13 +62,111 @@
       "source_id": "cnbc-club-rss",
       "trader": "CNBC Investing Club",
       "url": "https://www.cnbc.com/id/19854910/device/rss/rss.html",
-      "checked_utc": "2026-10-28T14:24:26.354592+00:00",
+      "checked_utc": "2026-10-28T19:49:09.382275+00:00",
       "note": "Official CNBC RSS filtered to Investing Club. May be access-blocked. Full Trust portfolio is a member feature; no bypass.",
-      "status": "ok",
-      "items_returned": 1
+      "status": "empty",
+      "items_returned": 0
     }
   ],
   "items": [
+    {
+      "id": "ac3c0b97047ff9f6ce2f2425",
+      "source_id": "bruce-free-updates",
+      "trader": "Bruce Marshall",
+      "source_url": "https://www.simplertrading.com/daily/options-free/how-im-trading-spx-into-the-fed-decision",
+      "title": "How I'm Trading SPX Into The Fed Decision",
+      "published_utc": null,
+      "author": null,
+      "classification": "PUBLICATION / NOT A TRADE ALERT",
+      "copy_ready": false,
+      "first_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "baseline": false
+    },
+    {
+      "id": "51df28ed8fea3019e556c46e",
+      "source_id": "bruce-free-updates",
+      "trader": "Bruce Marshall",
+      "source_url": "https://www.simplertrading.com/daily/options-free/one-of-the-most-volatile-weeks-of-the-year-starts-now-2",
+      "title": "One Of The Most Volatile Weeks Of The Year Starts Now",
+      "published_utc": null,
+      "author": null,
+      "classification": "PUBLICATION / NOT A TRADE ALERT",
+      "copy_ready": false,
+      "first_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "baseline": false
+    },
+    {
+      "id": "2e8044dfda79f600b04a43c8",
+      "source_id": "bruce-free-updates",
+      "trader": "Bruce Marshall",
+      "source_url": "https://www.simplertrading.com/daily/options-free/the-market-has-to-cry-uncle-first",
+      "title": "The Market Has To Cry Uncle First",
+      "published_utc": null,
+      "author": null,
+      "classification": "PUBLICATION / NOT A TRADE ALERT",
+      "copy_ready": false,
+      "first_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "baseline": false
+    },
+    {
+      "id": "838c1d1024baf06870c25066",
+      "source_id": "bruce-free-updates",
+      "trader": "Bruce Marshall",
+      "source_url": "https://www.simplertrading.com/daily/options-free/tech-is-bleeding-and-the-money-is-running-here",
+      "title": "Tech Is Bleeding And The Money Is Running Here",
+      "published_utc": null,
+      "author": null,
+      "classification": "PUBLICATION / NOT A TRADE ALERT",
+      "copy_ready": false,
+      "first_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "baseline": false
+    },
+    {
+      "id": "6028a4ba3072ddd42dc6b69d",
+      "source_id": "bruce-free-updates",
+      "trader": "Bruce Marshall",
+      "source_url": "https://www.simplertrading.com/daily/options-free/be-very-careful-with-semis-right-now",
+      "title": "Be VERY Careful With Semis Right Now",
+      "published_utc": null,
+      "author": null,
+      "classification": "PUBLICATION / NOT A TRADE ALERT",
+      "copy_ready": false,
+      "first_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "baseline": false
+    },
+    {
+      "id": "05f4a18eaaebd80312f1ce0c",
+      "source_id": "bruce-free-updates",
+      "trader": "Bruce Marshall",
+      "source_url": "https://www.simplertrading.com/daily/options-free/spcx-is-built-for-the-exponential-age-of-ai",
+      "title": "SPCX Is Built For The Exponential Age Of AI",
+      "published_utc": null,
+      "author": null,
+      "classification": "PUBLICATION / NOT A TRADE ALERT",
+      "copy_ready": false,
+      "first_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "baseline": false
+    },
+    {
+      "id": "4f752206e8d2ee49f06ac342",
+      "source_id": "bruce-free-updates",
+      "trader": "Bruce Marshall",
+      "source_url": "https://www.simplertrading.com/daily/options-free/chips-just-bounced-after-the-worst-drop-since-2008",
+      "title": "Chips Just Bounced After The Worst Drop Since 2008",
+      "published_utc": null,
+      "author": null,
+      "classification": "PUBLICATION / NOT A TRADE ALERT",
+      "copy_ready": false,
+      "first_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
+      "baseline": false
+    },
     {
       "id": "4a1fc948df4a0075413ca4b8",
       "source_id": "carter-blog",
@@ -80,7 +178,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -94,7 +192,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -108,7 +206,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -122,7 +220,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -136,7 +234,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -150,7 +248,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -164,7 +262,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -178,7 +276,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -192,7 +290,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -206,7 +304,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -220,7 +318,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -234,7 +332,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -248,7 +346,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -262,7 +360,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -276,7 +374,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -290,7 +388,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -304,7 +402,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -318,7 +416,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -332,7 +430,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -346,7 +444,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -360,7 +458,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -374,7 +472,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -388,7 +486,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -402,7 +500,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -416,7 +514,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -430,7 +528,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -444,7 +542,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -458,7 +556,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -472,7 +570,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -486,7 +584,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -500,7 +598,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -514,7 +612,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -528,7 +626,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -542,7 +640,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -556,7 +654,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -570,7 +668,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -584,7 +682,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -598,7 +696,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -612,7 +710,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -626,7 +724,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -640,7 +738,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -654,7 +752,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -668,7 +766,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -682,7 +780,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -696,7 +794,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -710,7 +808,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -724,7 +822,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -738,7 +836,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -752,7 +850,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -766,7 +864,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -780,7 +878,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -794,7 +892,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -808,7 +906,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -822,7 +920,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -836,7 +934,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -850,7 +948,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -864,7 +962,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -878,7 +976,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -892,7 +990,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -906,7 +1004,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -920,7 +1018,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -934,7 +1032,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -948,7 +1046,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -962,7 +1060,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -976,7 +1074,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -990,7 +1088,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -1004,7 +1102,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -1018,7 +1116,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -1032,7 +1130,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -1046,7 +1144,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -1060,7 +1158,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -1074,7 +1172,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -1088,7 +1186,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
@@ -1102,7 +1200,7 @@
       "classification": "PUBLICATION / NOT A TRADE ALERT",
       "copy_ready": false,
       "first_seen_utc": "2026-10-25T12:51:47.254948+00:00",
-      "last_seen_utc": "2026-10-28T14:24:26.354592+00:00",
+      "last_seen_utc": "2026-10-28T19:49:09.382275+00:00",
       "baseline": true
     },
     {
