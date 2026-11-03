@@ -111,11 +111,25 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                 progress.progress(min(1.0,(i+len(batch))/len(symbols)))
             progress.empty()
         rows = list(results.values())
-        if strict: rows=[r for r in rows if r["Liquidity proxy"]=="PASS"]
         for r in rows:
-            r["Quality"] = ("B" if r["Liquidity proxy"]=="PASS" else "C") + (" · oversold" if r["RSI14"]<30 else "")
+            reasons=[]
+            if r["Price $"] < 5: reasons.append("Price below $5")
+            if r["Avg daily $ volume"] < 20_000_000: reasons.append("Dollar volume below $20M")
+            if r["Reward/risk"] is None or r["Reward/risk"] < 2: reasons.append("Reward/risk below 2")
+            if r["Day change %"] is not None and abs(r["Day change %"]) >= 20: reasons.append("Extreme daily move")
+            r["Quality"] = "A · TECHNICAL ONLY" if not reasons else ("B · REVIEW" if r["Price $"] >= 5 and r["Avg daily $ volume"] >= 10_000_000 else "C · EXCLUDE")
+            r["Quality notes"] = "; ".join(reasons) if reasons else "Technical pass; news and options unverified"
+        if strict: rows=[r for r in rows if r["Liquidity proxy"]=="PASS"]
             r["Options venue"]="thinkorswim — not connected"
         buy = pd.DataFrame([dict(r, Signal="BUY WATCH") for r in rows if r["Deviation %"] <= -buy_threshold and r.get("Day change %") is not None and r["Day change %"] <= max_rebound])
+        a_candidates=buy[buy["Quality"]=="A · TECHNICAL ONLY"] if not buy.empty else buy
+        st.subheader(f"A-grade technical BUY shortlist ({len(a_candidates)})")
+        st.caption("Provisional technical grade only; news and thinkorswim options chain are NOT verified.")
+        if a_candidates.empty:
+            st.info("No A-grade technical BUY candidates in this scanned sample.")
+        else:
+            st.dataframe(a_candidates[["Ticker","Quality","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Day change %","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True,column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)})
+            st.download_button("Download A-grade shortlist",a_candidates.to_csv(index=False),f"{tab_id}_a_grade.csv","text/csv",key=f"{tab_id}_a_csv")
         sell_rows=[]
         for r in rows:
             symbol=r["Ticker"]
@@ -140,7 +154,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             if buy.empty: st.info("No stocks currently meet the BUY threshold in this sample.")
             else:
                 buy=buy.sort_values("Deviation %")
-                columns=["Ticker","Signal","Previous close $","Day change %","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Deviation %","Quality","Liquidity proxy","Avg daily $ volume","RSI14","Price timestamp","Source"]
+                columns=["Ticker","Signal","Previous close $","Day change %","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Deviation %","Quality","Quality notes","Liquidity proxy","Avg daily $ volume","RSI14","Price timestamp","Source"]
                 st.dataframe(buy[[c for c in columns if c in buy.columns]], hide_index=True, use_container_width=True, column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)}, height=340)
                 st.download_button("Download BUY CSV", buy.to_csv(index=False), f"{tab_id}_buy.csv","text/csv",key=f"{tab_id}_buy_csv")
         st.markdown("### SELL / EXIT candidates — ticker and recorded entry")
