@@ -14,6 +14,7 @@ import trader_tracker
 import real_estate
 import kotegawa_scan
 import intraday_actions
+import dual_signal_scan
 
 st.set_page_config(page_title="Three Lens Market Dashboard", page_icon="📈", layout="wide")
 
@@ -350,10 +351,10 @@ if not results.empty:
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia inspired", "4 · Stock lookup", "5 · Options income scan", "6 · $100 paper challenge", "7 · Earnings iron condor alerts", "8 · Project T Scan Results", "9 · Real Estate Investments", "10 · Guaranteed Rent", "11 · Kotegawa Mean Reversion", "12 · Intraday Buy / Sell"])
 with tab11:
-    kotegawa_scan.render(price_map, universe_name, watchlist_text, limit, get_universe, get_prices)
+    dual_signal_scan.render("tab11", universe_name, watchlist_text, get_universe, intraday=False)
 
 with tab12:
-    intraday_actions.render(get_universe, get_prices, universe_name, watchlist_text)
+    dual_signal_scan.render("tab12", universe_name, watchlist_text, get_universe, intraday=True)
 
 with tab10:
     import streamlit.components.v1 as components
