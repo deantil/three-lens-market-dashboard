@@ -7,7 +7,7 @@ import streamlit as st
 import yfinance as yf
 from credit_spread_engine import build_candidates, parse_symbols, DEFAULT_FEES
 
-VERSION = 'credit-spreads-v1'
+VERSION = 'credit-spreads-v1.1'
 DEFAULT_SYMBOLS = 'AAPL MSFT AMD INTC SOFI F HOOD PLTR'
 
 
@@ -87,7 +87,7 @@ def run_scan(symbols, direction, fees, window, progress=None):
 
 def render():
     st.subheader('Project T · Credit Spread Scanner')
-    st.caption(f'{VERSION} · Read-only research · Bull put and bear call spreads only · No naked options or order submission')
+    st.caption(f'{VERSION} · yfinance {yf.__version__} · Read-only research · Bull put and bear call spreads only · No naked options or order submission')
     a, b, c = st.columns(3)
     a.metric('Account capital', '$5,000')
     b.metric('Maximum planned risk / trade', '$50 including fees')
@@ -118,6 +118,8 @@ def render():
         return
     st.caption(f"Completed UTC: {report['completed_utc']} · Settings used: {report['settings']}")
     stocks = pd.DataFrame(report['stocks'])
+    coverage_first = ['Ticker', 'Candidates', 'Chains loaded', 'Data errors']
+    stocks = stocks[[c for c in coverage_first if c in stocks] + [c for c in stocks if c not in coverage_first]]
     chains = sum(s.get('Chains loaded', 0) for s in report['stocks'])
     if not chains:
         st.error('Scan completed with DATA UNAVAILABLE: no option chains were returned. This is not a no-trade signal. See per-stock errors below.')
