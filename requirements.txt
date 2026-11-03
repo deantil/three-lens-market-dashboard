@@ -1,5 +1,5 @@
 streamlit>=1.40,<2
-yfinance>=0.2.50
+yfinance==1.7.0
 pandas>=2.2
 requests>=2.32
 openpyxl>=3.1
