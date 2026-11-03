@@ -42,6 +42,7 @@ def fetch_batch(symbols, intraday):
             if price <= 0 or sma <= 0:
                 continue
             previous_close = float(completed["Close"].iloc[-1]) if intraday else float(completed["Close"].iloc[-2])
+            closing_price = float(completed["Close"].iloc[-1])
             day_change = (price / previous_close - 1) * 100 if previous_close > 0 else None
             recent_low = float(completed["Low"].tail(5).min())
             stop = min(recent_low, price) * 0.99
@@ -58,7 +59,7 @@ def fetch_batch(symbols, intraday):
                            "Avg daily $ volume":round(avg_dollar),
                            "RSI14":round(rsi,1),
                            "Liquidity proxy":"PASS" if avg_dollar >= 10_000_000 else "LOW",
-                           "Ticker":symbol, "Price $":round(price,2), "Previous close $":round(previous_close,2), "Day change %":round(day_change,2) if day_change is not None else None, "SMA25 $":round(sma,2),
+                           "Ticker":symbol, "Price $":round(price,2), "Closing price $":round(closing_price,2), "Previous close $":round(previous_close,2), "Day change %":round(day_change,2) if day_change is not None else None, "SMA25 $":round(sma,2),
                            "Deviation %":round((price/sma-1)*100,2),
                            "Price timestamp":stamp, "Source":"5m snapshot" if symbol in latest else "daily close"}
         except (KeyError, ValueError, TypeError):
@@ -123,6 +124,12 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         if strict: rows=[r for r in rows if not r["Quality"].startswith("C")]
         for r in rows:
             r["Options venue"]="thinkorswim — not connected"
+        for r in rows:
+            checks=[]
+            checks.append("SMA25 deviation PASS" if r["Deviation %"] <= -buy_threshold else "SMA25 deviation FAIL")
+            checks.append("Daily rebound PASS" if r.get("Day change %") is not None and r["Day change %"] <= max_rebound else "Daily rebound FAIL")
+            checks.append("Liquidity PASS" if r["Price $"] >= 5 and r["Avg daily $ volume"] >= 10_000_000 else "Liquidity FAIL")
+            r["Strategy qualification"] = " | ".join(checks)
         buy = pd.DataFrame([dict(r, Signal="BUY WATCH") for r in rows if r["Deviation %"] <= -buy_threshold and r.get("Day change %") is not None and r["Day change %"] <= max_rebound])
         st.subheader("Large daily declines — objective research")
         priority=[r for r in rows if r.get("Day change %") is not None and r["Day change %"]<=-15 and r["Price $"]>=5 and r["Avg daily $ volume"]>=10_000_000]
@@ -136,7 +143,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         if a_candidates.empty:
             st.info("No A-grade technical BUY candidates in this scanned sample.")
         else:
-            st.dataframe(a_candidates[["Ticker","Quality","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Day change %","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True,column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)})
+            st.dataframe(a_candidates[["Ticker","Quality","Closing price $","SMA25 $","Deviation %","Strategy qualification","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Day change %","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True,column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)})
             st.download_button("Download A-grade shortlist",a_candidates.to_csv(index=False),f"{tab_id}_a_grade.csv","text/csv",key=f"{tab_id}_a_csv")
         sell_rows=[]
         for r in rows:
@@ -163,7 +170,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             if buy.empty: st.info("No stocks currently meet the BUY threshold in this sample.")
             else:
                 buy=buy.sort_values("Deviation %")
-                columns=["Ticker","Signal","Previous close $","Day change %","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Deviation %","Quality","Quality notes","Liquidity proxy","Avg daily $ volume","RSI14","Price timestamp","Source"]
+                columns=["Ticker","Signal","Closing price $","SMA25 $","Deviation %","Strategy qualification","Previous close $","Day change %","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Deviation %","Quality","Quality notes","Liquidity proxy","Avg daily $ volume","RSI14","Price timestamp","Source"]
                 st.dataframe(buy[[c for c in columns if c in buy.columns]], hide_index=True, use_container_width=True, column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)}, height=340)
                 st.download_button("Download BUY CSV", buy.to_csv(index=False), f"{tab_id}_buy.csv","text/csv",key=f"{tab_id}_buy_csv")
         st.markdown("### SELL / EXIT candidates — ticker and recorded entry")
@@ -172,7 +179,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             if sell.empty: st.info("No stocks currently meet the SELL threshold in this sample.")
             else:
                 sell=sell.sort_values("Deviation %",ascending=False)
-                columns=["Ticker","Signal","Actual buy entry $","Sell reference $","Day change %","Exit target $","Exit stop $","Return since buy %","Deviation %","Quality","Price timestamp","Source"]
+                columns=["Ticker","Signal","Closing price $","SMA25 $","Deviation %","Strategy qualification","Actual buy entry $","Sell reference $","Day change %","Exit target $","Exit stop $","Return since buy %","Deviation %","Quality","Price timestamp","Source"]
                 st.dataframe(sell[[c for c in columns if c in sell.columns]], hide_index=True, use_container_width=True, column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)}, height=340)
                 st.download_button("Download SELL CSV",sell.to_csv(index=False),f"{tab_id}_sell.csv","text/csv",key=f"{tab_id}_sell_csv")
         if failures:
