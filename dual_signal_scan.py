@@ -1,3 +1,6 @@
+import gzip
+import json
+import requests
 """Fast bounded research scanner for both discovery tabs."""
 import pandas as pd
 import streamlit as st
@@ -66,13 +69,20 @@ def fetch_batch(symbols, intraday):
             continue
     return out
 
+@st.cache_data(ttl=300, show_spinner=False)
+def load_full_snapshot():
+    url="https://raw.githubusercontent.com/deantil/three-lens-market-dashboard/main/data/full_universe_daily.json.gz"
+    response=requests.get(url,timeout=20)
+    response.raise_for_status()
+    return json.loads(gzip.decompress(response.content).decode("utf-8"))
+
 def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     st.header("Kotegawa · BUY and SELL Discovery" if not intraday else "Intraday · BUY and SELL Discovery")
     st.caption("BUY = below SMA25 by selected threshold. SELL WATCH = above SMA25 by selected threshold (potential mean-reversion/overextension, NOT a sell order or short recommendation). No account-size filter.")
     a,b,c = st.columns(3)
     buy_threshold = a.number_input("BUY: % below SMA25", min_value=0.1, value=20.0, step=1.0, key=f"{tab_id}_buy")
     sell_threshold = b.number_input("SELL WATCH: % above SMA25", min_value=0.1, value=10.0, step=1.0, key=f"{tab_id}_sell")
-    count = c.selectbox("Universe coverage", ["Quick test: 40", "Quick test: 150", "Full selected universe"], index=0, key=f"{tab_id}_count")
+    count = c.selectbox("Universe coverage", ["Full selected universe (background snapshot)", "Quick test: 40", "Quick test: 150", "Live full universe (slow)"], index=0, key=f"{tab_id}_count")
     st.caption("Stock quality proxy: $10M average daily dollar volume. BUY list excludes same-day gains above your selected threshold (10% default); this is an adjustable research heuristic, not a validated edge. Options-chain validation is separate in thinkorswim.")
     strict = st.checkbox("Require liquid stocks (exclude C-grade)", value=True, key=f"{tab_id}_strict")
     max_rebound = st.number_input("Maximum same-day gain for BUY candidates (%)", min_value=0.0, max_value=100.0, value=10.0, step=1.0, key=f"{tab_id}_max_rebound")
@@ -95,14 +105,23 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     if st.button("Refresh BUY and SELL lists", type="primary", key=f"{tab_id}_run"):
         st.session_state[f"{tab_id}_requested"] = True
         st.session_state.pop(f"{tab_id}_cached", None)
-    if not st.session_state.get(f"{tab_id}_requested"):
+    if not st.session_state.get(f"{tab_id}_requested") and count != "Full selected universe (background snapshot)":
         st.info("Click Refresh BUY and SELL lists to scan the selected sidebar universe.")
         return
     try:
+        if count == "Full selected universe (background snapshot)":
+            try:
+                snapshot=load_full_snapshot()
+                st.session_state[f"{tab_id}_cached"]=(snapshot.get("rows",[]),snapshot.get("universe_size",0),snapshot.get("universe_size",0),len(snapshot.get("failed_symbols",[])))
+                st.caption("Snapshot updated UTC: "+snapshot.get("generated_at_utc","unknown"))
+                if intraday: st.warning("Full universe snapshot uses daily closing prices, not live five-minute bars.")
+            except Exception:
+                st.warning("Full universe snapshot not available until scheduled GitHub Actions scan completes. No partial list is shown as full-market coverage.")
+                return
         if f"{tab_id}_cached" not in st.session_state:
             with st.spinner("Fetching stock histories for selected universe…"):
                 universe = get_universe(universe_name, watchlist_text)
-                limit = None if count == "Full selected universe" else int(count.rsplit(" ",1)[-1])
+                limit = None if count == "Live full universe (slow)" else int(count.rsplit(" ",1)[-1])
                 symbols = list(dict.fromkeys(list(entries) + (universe if limit is None else universe[:limit])))
                 if not symbols:
                     st.warning("The selected universe contains no symbols.")
