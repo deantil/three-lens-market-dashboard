@@ -7,6 +7,23 @@ from streamlit.testing.v1 import AppTest
 from credit_spread_scanner import run_scan, scan_symbol, snapshot_fallback
 
 class ScannerTests(unittest.TestCase):
+    def test_fresh_snapshot_recalculates_user_fees_and_direction(self):
+        now = datetime.now(timezone.utc)
+        exp = (now.date() + timedelta(days=10)).isoformat()
+        code = (now.date() + timedelta(days=10)).strftime('%y%m%d')
+        def option(strike, bid, ask):
+            return {'contractSymbol': f'AAPL{code}P{strike*1000:08d}', 'strike': strike,
+                    'bid': bid, 'ask': ask, 'contractSize': 'REGULAR', 'openInterest': 500, 'volume': 50}
+        data = {'stocks': {'AAPL': {'retrieved_utc': now.isoformat(), 'spot': 101., 'trend': 'Bullish',
+            'chains': {exp: {'puts': [option(100,.8,.85), option(99,.2,.25)], 'calls': []}}}}}
+        with patch('credit_spread_scanner.published_snapshot', return_value=data):
+            rows, status = snapshot_fallback('AAPL', 'Both', 3., '7–45 DTE', {'Data errors': ''})
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]['Max loss incl fees $'], 48.)
+            self.assertIn('Published', rows[0]['Data source'])
+            self.assertEqual(snapshot_fallback('AAPL', 'Both', 6., '7–45 DTE', {'Data errors': ''})[0], [])
+            self.assertEqual(snapshot_fallback('AAPL', 'Bear call', 3., '7–45 DTE', {'Data errors': ''})[0], [])
+
     def test_stale_snapshot_is_rejected(self):
         data = {'stocks': {'AAPL': {'retrieved_utc': (datetime.now(timezone.utc) - timedelta(minutes=21)).isoformat()}}}
         with patch('credit_spread_scanner.published_snapshot', return_value=data):

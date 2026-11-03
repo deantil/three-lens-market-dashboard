@@ -48,6 +48,8 @@ def snapshot_fallback(symbol, direction, fees, window, direct_status):
         if not loaded:
             raise ValueError('Published feed has no chains in selected window')
         return rows, dict(direct_status, **{'Chains loaded': loaded, 'Candidates': len(rows),
+            'Expirations requested': loaded, 'Spot reference $': stock['spot'], '20-day trend': stock['trend'],
+            'Price date': stock.get('price_date', 'See snapshot retrieval time'),
             'Pairs checked': pairs, 'Over budget / unprofitable': rejected,
             'Data source': 'Published Yahoo snapshot via GitHub Actions',
             'Snapshot age minutes': round(age, 1), 'Retrieved UTC': stock['retrieved_utc'],
@@ -77,7 +79,7 @@ def scan_symbol(symbol, direction, fees, window, snapshot_sink=None, allow_fallb
         status.update({'Price history': 'Available', 'Spot reference $': spot,
                        'Price date': str(close.index[-1]), '20-day trend': trend})
         if snapshot_sink is not None:
-            snapshot_sink[symbol] = {'spot': spot, 'trend': trend, 'retrieved_utc': now.isoformat(), 'chains': {}}
+            snapshot_sink[symbol] = {'spot': spot, 'trend': trend, 'price_date': str(close.index[-1]), 'retrieved_utc': now.isoformat(), 'chains': {}}
         expirations = []
         for exp in ticker.options:
             dte = (pd.Timestamp(exp).date() - now.date()).days
