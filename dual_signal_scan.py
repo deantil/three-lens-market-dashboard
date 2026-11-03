@@ -41,12 +41,60 @@ def fetch_batch(symbols, intraday):
             price, stamp = latest.get(symbol, (float(x["Close"].iloc[-1]), str(x.index[-1])))
             if price <= 0 or sma <= 0:
                 continue
-            out[symbol] = {"Ticker":symbol, "Price $":round(price,2), "SMA25 $":round(sma,2),
+            recent_low = float(completed["Low"].tail(5).min())
+            stop = min(recent_low, price) * 0.99
+            avg_dollar = float((completed["Close"].tail(20) * completed["Volume"].tail(20)).mean())
+            daily_returns = completed["Close"].pct_change().dropna()
+            rsi_delta = completed["Close"].diff()
+            up = rsi_delta.clip(lower=0).tail(14).mean()
+            down = -rsi_delta.clip(upper=0).tail(14).mean()
+            rsi = 100.0 if down == 0 else 100 - 100 / (1 + up / down)
+            out[symbol] = {"Entry reference $":round(price,2), "Sell target $":round(sma,2),
+                           "Stop reference $":round(stop,2),
+                           "Potential return %":round((sma / price - 1)*100,2),
+                           "Reward/risk":round((sma-price)/(price-stop),2) if price>stop else None,
+                           "Avg daily $ volume":round(avg_dollar),
+                           "RSI14":round(rsi,1),
+                           "Liquidity proxy":"PASS" if avg_dollar >= 10_000_000 else "LOW",
+                           "Ticker":symbol, "Price $":round(price,2), "SMA25 $":round(sma,2),
                            "Deviation %":round((price/sma-1)*100,2),
                            "Price timestamp":stamp, "Source":"5m snapshot" if symbol in latest else "daily close"}
         except (KeyError, ValueError, TypeError):
             continue
     return out
+
+@st.cache_data(ttl=900, show_spinner=False)
+def option_liquidity(symbol):
+    """Sample nearest available 20–60 DTE ATM call and put. Missing data is UNKNOWN."""
+    try:
+        t = yf.Ticker(symbol)
+        expiries = t.options
+        today = pd.Timestamp.now().date()
+        choices = [e for e in expiries if 20 <= (pd.Timestamp(e).date()-today).days <= 60]
+        if not choices:
+            return {"Options":"UNKNOWN", "Option spread %":None, "ATM open interest":None, "ATM volume":None}
+        chain = t.option_chain(choices[0])
+        q = t.fast_info.get("last_price")
+        if not q:
+            return {"Options":"UNKNOWN"}
+        samples = []
+        for df in (chain.calls,chain.puts):
+            if df.empty: continue
+            contract = df.iloc[(df["strike"]-q).abs().argsort()[:1]].iloc[0]
+            bid,ask = float(contract["bid"]),float(contract["ask"])
+            if bid<=0 or ask<=bid: continue
+            samples.append(((ask-bid)/((ask+bid)/2)*100,
+                            int(contract["openInterest"]) if pd.notna(contract["openInterest"]) else 0,
+                            int(contract["volume"]) if pd.notna(contract["volume"]) else 0))
+        if len(samples)<2: return {"Options":"UNKNOWN"}
+        spread=max(x[0] for x in samples)
+        oi=min(x[1] for x in samples)
+        volume=min(x[2] for x in samples)
+        status="PASS" if spread<=10 and oi>=100 and volume>=10 else "WEAK"
+        return {"Options":status,"Option spread %":round(spread,1),"ATM open interest":oi,"ATM volume":volume}
+    except Exception:
+        return {"Options":"UNKNOWN"}
+
 
 def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     st.header("Kotegawa · BUY and SELL Discovery" if not intraday else "Intraday · BUY and SELL Discovery")
@@ -55,7 +103,25 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     buy_threshold = a.number_input("BUY: % below SMA25", min_value=0.1, value=20.0, step=1.0, key=f"{tab_id}_buy")
     sell_threshold = b.number_input("SELL WATCH: % above SMA25", min_value=0.1, value=10.0, step=1.0, key=f"{tab_id}_sell")
     count = c.selectbox("Max symbols per scan", [20, 40, 80, 150], index=1, key=f"{tab_id}_count")
-    st.caption("Start with 20–40 symbols for speed. A scan cannot guarantee a match; adjust thresholds to explore more names.")
+    st.caption("Research quality thresholds: $10M average daily stock dollar volume; optional 20–60 DTE near-the-money call/put chain check, max 10% bid-ask spread, at least 100 OI and 10 contracts volume per side. These are screening heuristics, not proven performance rules.")
+    strict = st.checkbox("Show only stocks passing stock-liquidity proxy", value=False, key=f"{tab_id}_strict")
+    st.caption("SELL exits require a recorded buy entry. Enter ticker, actual buy price, and optional stop below (one position per line).")
+    positions_text = st.text_area("My recorded stock entries (TICKER,BUY_PRICE,STOP_PRICE)",placeholder="AAPL,150,140",key=f"{tab_id}_entries")
+    entries={}
+    for line in positions_text.splitlines():
+        fields=[x.strip() for x in line.split(",")]
+        if not line.strip(): continue
+        try:
+            if len(fields) not in (2,3): raise ValueError()
+            symbol=fields[0].upper()
+            buy_price=float(fields[1])
+            stop_price=float(fields[2]) if len(fields)==3 else None
+            if not symbol.replace("-","").isalnum() or buy_price<=0 or (stop_price is not None and stop_price<=0): raise ValueError()
+            entries[symbol]=(buy_price,stop_price)
+        except ValueError:
+            st.warning(f"Ignoring invalid entry: {line}")
+    check_options=st.checkbox("Check options-chain quality for matching candidates (slower)",value=False,key=f"{tab_id}_options")
+    st.caption("Options-chain check only runs on the first 10 matching tickers. Others are labeled NOT CHECKED; missing data is UNKNOWN.")
     if st.button("Refresh BUY and SELL lists", type="primary", key=f"{tab_id}_run"):
         st.session_state[f"{tab_id}_requested"] = True
     if not st.session_state.get(f"{tab_id}_requested"):
@@ -63,7 +129,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         return
     try:
         with st.spinner(f"Fetching latest available prices for up to {count} symbols…"):
-            symbols = get_universe(universe_name, watchlist_text)[:count]
+            symbols = list(dict.fromkeys(get_universe(universe_name, watchlist_text)[:count] + list(entries)))
             results = {}
             failures = []
             progress = st.progress(0)
@@ -76,8 +142,33 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                 progress.progress(min(1.0,(i+len(batch))/len(symbols)))
             progress.empty()
         rows = list(results.values())
+        if strict: rows=[r for r in rows if r["Liquidity proxy"]=="PASS"]
+        for r in rows:
+            r["Quality"] = ("B" if r["Liquidity proxy"]=="PASS" else "C") + (" · oversold" if r["RSI14"]<30 else "")
+            r["Options"]="NOT CHECKED"
+        if check_options:
+            matches=[r for r in rows if r["Deviation %"]<=-buy_threshold or r["Deviation %"]>=sell_threshold or r["Ticker"] in entries]
+            with st.spinner("Checking a small number of options chains…"):
+                for r in matches[:10]:
+                    r.update(option_liquidity(r["Ticker"]))
         buy = pd.DataFrame([dict(r, Signal="BUY WATCH") for r in rows if r["Deviation %"] <= -buy_threshold])
-        sell = pd.DataFrame([dict(r, Signal="SELL WATCH") for r in rows if r["Deviation %"] >= sell_threshold])
+        sell_rows=[]
+        for r in rows:
+            symbol=r["Ticker"]
+            if symbol in entries:
+                buy_price,manual_stop=entries[symbol]
+                sell_price=r["Price $"]
+                target=r["SMA25 $"]
+                stop=manual_stop if manual_stop is not None else r["Stop reference $"]
+                status="TARGET HIT — EXIT WATCH" if sell_price>=target else ("STOP HIT — EXIT WATCH" if sell_price<=stop else "HOLD / MONITOR")
+                sell_rows.append(dict(r, **{"Actual buy entry $":buy_price,"Sell reference $":sell_price,
+                              "Exit target $":target,"Exit stop $":round(stop,2),
+                              "Return since buy %":round((sell_price/buy_price-1)*100,2),
+                              "Signal":status}))
+            elif r["Deviation %"]>=sell_threshold:
+                sell_rows.append(dict(r, **{"Actual buy entry $":None,"Sell reference $":r["Price $"],
+                                         "Exit target $":None,"Signal":"OVEREXTENDED — NO RECORDED ENTRY"}))
+        sell=pd.DataFrame(sell_rows)
         st.caption(f"Scanned {len(symbols)} requested tickers · {len(rows)} usable price histories · {len(failures)} failed batches. Market data can be delayed; check each timestamp.")
         left,right=st.columns(2)
         with left:
@@ -96,6 +187,6 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                 st.download_button("Download SELL CSV",sell.to_csv(index=False),f"{tab_id}_sell.csv","text/csv",key=f"{tab_id}_sell_csv")
         if failures:
             st.warning("Some data batches failed; results are incomplete. Retry with fewer symbols.")
-        st.caption("SELL WATCH is a price-screening condition only. It does not indicate you hold the stock or should sell short. Intraday quotes may be delayed; if 5-minute data is missing, daily close is explicitly labeled. No orders are placed.")
+        st.caption("Recorded entries are session inputs, not verified broker fills; they may be lost on app restart. SELL WATCH is a price-screening condition only. It does not indicate you hold the stock or should sell short. Intraday quotes may be delayed; if 5-minute data is missing, daily close is explicitly labeled. No orders are placed.")
     except Exception as e:
         st.error(f"Scan failed: {e}")
