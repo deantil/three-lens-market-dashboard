@@ -162,6 +162,20 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                 sell_rows.append(dict(r, **{"Actual buy entry $":None,"Sell reference $":r["Price $"],
                                          "Exit target $":None,"Signal":"OVEREXTENDED — NO RECORDED ENTRY"}))
         sell=pd.DataFrame(sell_rows)
+        # Always show objective overextension rankings when no stocks cross the sell threshold.
+        # These are research candidates, never fabricated holdings or sell orders.
+        overextended=pd.DataFrame([r for r in rows if r["Ticker"] not in entries and r["Deviation %"]>0])
+        if not overextended.empty:
+            overextended=overextended.sort_values("Deviation %",ascending=False)
+        st.subheader(f"Overextended stocks — SELL research ({len(overextended)})")
+        st.caption("Positive SMA25 deviation only. These are NOT portfolio exits, and no purchase price is assumed.")
+        if overextended.empty:
+            st.info("No stocks above their 25-day SMA in this sample. Broaden the universe for more coverage.")
+        else:
+            st.dataframe(overextended[["Ticker","Closing price $","SMA25 $","Deviation %","Day change %","Quality","Price timestamp"]],hide_index=True,use_container_width=True,column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)})
+        st.subheader("Recorded-position exits")
+        if not entries:
+            st.info("No buy entries have been recorded. An actual entry price and realized return cannot be calculated without a recorded purchase.")
         st.caption(f"Excluded {excluded_count} C-grade stocks from the displayed lists when the liquidity/quality filter is enabled.")
         st.caption(f"Scanned {len(symbols)} requested tickers · {len(rows)} usable price histories · {len(failures)} failed batches. Market data can be delayed; check each timestamp.")
         st.markdown("### BUY candidates — ticker, entry, target and stop")
@@ -175,7 +189,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                 st.download_button("Download BUY CSV", buy.to_csv(index=False), f"{tab_id}_buy.csv","text/csv",key=f"{tab_id}_buy_csv")
         st.markdown("### SELL / EXIT candidates — ticker and recorded entry")
         if True:
-            st.subheader(f"SELL watchlist ({len(sell)})")
+            st.subheader(f"SELL / exit signals ({len(sell)})")
             if sell.empty: st.info("No stocks currently meet the SELL threshold in this sample.")
             else:
                 sell=sell.sort_values("Deviation %",ascending=False)
