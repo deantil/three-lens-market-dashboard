@@ -2,16 +2,62 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import re
+import requests
 import pandas as pd
 import streamlit as st
 import yfinance as yf
 from credit_spread_engine import build_candidates, parse_symbols, DEFAULT_FEES
 
-VERSION = 'credit-spreads-v1.1'
+VERSION = 'credit-spreads-v1.2'
 DEFAULT_SYMBOLS = 'AAPL MSFT AMD INTC SOFI F HOOD PLTR'
 
 
-def scan_symbol(symbol, direction, fees, window):
+@st.cache_data(ttl=60, show_spinner=False)
+def published_snapshot():
+    response = requests.get('https://raw.githubusercontent.com/deantil/three-lens-market-dashboard/credit-scan-state/credit_market_snapshot.json', timeout=15)
+    response.raise_for_status()
+    return response.json()
+
+
+def snapshot_fallback(symbol, direction, fees, window, direct_status):
+    now = datetime.now(timezone.utc)
+    try:
+        snapshot = published_snapshot()
+        stock = snapshot.get('stocks', {}).get(symbol)
+        if not stock:
+            raise ValueError('Ticker not covered by published feed')
+        observed = datetime.fromisoformat(stock['retrieved_utc'])
+        age = (now - observed).total_seconds() / 60
+        if not 0 <= age <= 20:
+            raise ValueError(f'Published data stale: {age:.1f} minutes; maximum 20')
+        rows, pairs, rejected, loaded = [], 0, 0, 0
+        for exp, chain in stock['chains'].items():
+            dte = (pd.Timestamp(exp).date() - now.date()).days
+            if not (7 <= dte <= 14 if window == '7–14 DTE' else 30 <= dte <= 45 if window == '30–45 DTE' else 7 <= dte <= 45):
+                continue
+            found, counts = build_candidates(symbol, stock['spot'], exp, chain['puts'], chain['calls'], direction, fees, now.date())
+            loaded += 1
+            pairs += counts['pairs_checked']
+            rejected += counts['risk_rejected']
+            for row in found:
+                row['Trend alignment'] = 'Aligned' if (row['Direction'] == 'Bull put') == (stock['trend'] == 'Bullish') else 'Countertrend'
+                row['Retrieved UTC'] = stock['retrieved_utc']
+                row['Data source'] = 'Published Yahoo snapshot via GitHub Actions; delayed'
+                row['Snapshot age minutes'] = round(age, 1)
+            rows.extend(found)
+        if not loaded:
+            raise ValueError('Published feed has no chains in selected window')
+        return rows, dict(direct_status, **{'Chains loaded': loaded, 'Candidates': len(rows),
+            'Pairs checked': pairs, 'Over budget / unprofitable': rejected,
+            'Data source': 'Published Yahoo snapshot via GitHub Actions',
+            'Snapshot age minutes': round(age, 1), 'Retrieved UTC': stock['retrieved_utc'],
+            'Data errors': 'Direct chain unavailable; using timestamped published feed. ' + direct_status.get('Data errors', '')})
+    except Exception as exc:
+        direct_status['Data errors'] += '; fallback: ' + str(exc)[:200]
+        return [], direct_status
+
+
+def scan_symbol(symbol, direction, fees, window, snapshot_sink=None, allow_fallback=True):
     now = datetime.now(timezone.utc)
     status = {'Ticker': symbol, 'Price history': 'Unavailable', 'Chains loaded': 0,
               'Expirations requested': 0, 'Pairs checked': 0, 'Over budget / unprofitable': 0,
@@ -30,6 +76,8 @@ def scan_symbol(symbol, direction, fees, window):
         trend = 'Bullish' if spot >= float(close.tail(20).mean()) else 'Bearish'
         status.update({'Price history': 'Available', 'Spot reference $': spot,
                        'Price date': str(close.index[-1]), '20-day trend': trend})
+        if snapshot_sink is not None:
+            snapshot_sink[symbol] = {'spot': spot, 'trend': trend, 'retrieved_utc': now.isoformat(), 'chains': {}}
         expirations = []
         for exp in ticker.options:
             dte = (pd.Timestamp(exp).date() - now.date()).days
@@ -46,6 +94,8 @@ def scan_symbol(symbol, direction, fees, window):
                 if chain is None or (chain.calls.empty and chain.puts.empty):
                     raise ValueError('Empty option chain')
                 status['Chains loaded'] += 1
+                if snapshot_sink is not None:
+                    snapshot_sink[symbol]['chains'][exp] = {'puts': chain.puts.to_dict('records'), 'calls': chain.calls.to_dict('records')}
                 found, counts = build_candidates(symbol, spot, exp, chain.puts.to_dict('records'),
                     chain.calls.to_dict('records'), direction, fees, now.date())
                 for row in found:
@@ -61,6 +111,8 @@ def scan_symbol(symbol, direction, fees, window):
         errors.append(f'{type(exc).__name__}: {str(exc)[:200]}')
     status['Candidates'] = len(rows)
     status['Data errors'] = '; '.join(errors)
+    if allow_fallback and not status['Chains loaded']:
+        return snapshot_fallback(symbol, direction, fees, window, status)
     return rows, status
 
 
@@ -88,6 +140,7 @@ def run_scan(symbols, direction, fees, window, progress=None):
 def render():
     st.subheader('Project T · Credit Spread Scanner')
     st.caption(f'{VERSION} · yfinance {yf.__version__} · Read-only research · Bull put and bear call spreads only · No naked options or order submission')
+    st.caption('Run Scan tries direct Yahoo chains, then a published Yahoo snapshot collected by GitHub Actions approximately every 15 minutes. Fallback data must be at most 20 minutes old; schedules may be delayed. Coverage and actual retrieval times appear below. Custom tickers outside the published watchlist require direct data.')
     a, b, c = st.columns(3)
     a.metric('Account capital', '$5,000')
     b.metric('Maximum planned risk / trade', '$50 including fees')

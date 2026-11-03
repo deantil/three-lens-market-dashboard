@@ -1,0 +1,45 @@
+name: Credit spread market data feed
+on:
+  push:
+    branches: [main]
+    paths: ['credit_spread_*.py', '.github/workflows/credit-spread-feed.yml']
+  schedule:
+    - cron: '*/15 * * * 1-5'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: credit-spread-market-feed
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python credit_spread_snapshot.py
+      - name: Publish public snapshot on isolated branch
+        run: |
+          mkdir -p /tmp/credit-feed
+          cp credit_market_snapshot.json /tmp/credit-feed/
+          cd /tmp/credit-feed
+          git init
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add origin https://github.com/${{ github.repository }}.git
+          if git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" fetch origin credit-scan-state; then
+            git reset --soft FETCH_HEAD
+            git checkout -b credit-scan-state
+          else
+            git checkout --orphan credit-scan-state
+          fi
+          git add credit_market_snapshot.json
+          git commit -m 'Refresh timestamped public credit spread market data'
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin HEAD:credit-scan-state
+        env:
+          GH_TOKEN: ${{ github.token }}
+

@@ -1,12 +1,19 @@
 """UI and provider tests use explicit fixtures, never displayed as real market data."""
 import unittest
 from unittest.mock import patch
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import pandas as pd
 from streamlit.testing.v1 import AppTest
-from credit_spread_scanner import run_scan, scan_symbol
+from credit_spread_scanner import run_scan, scan_symbol, snapshot_fallback
 
 class ScannerTests(unittest.TestCase):
+    def test_stale_snapshot_is_rejected(self):
+        data = {'stocks': {'AAPL': {'retrieved_utc': (datetime.now(timezone.utc) - timedelta(minutes=21)).isoformat()}}}
+        with patch('credit_spread_scanner.published_snapshot', return_value=data):
+            rows, status = snapshot_fallback('AAPL', 'Both', 3., '7–45 DTE', {'Data errors': 'direct unavailable'})
+        self.assertEqual(rows, [])
+        self.assertIn('stale', status['Data errors'])
+
     def test_provider_failure_is_not_no_trade(self):
         with patch('credit_spread_scanner.yf.Ticker', side_effect=RuntimeError('provider denied')):
             report = run_scan(['AAPL'], 'Both', 3., '7–45 DTE')
