@@ -30,6 +30,8 @@ def run_connected_scan(snapshot, fees=3., window='7–45 DTE', limit=20,
     def collect(signal):
         symbol, direction = signal['Ticker'], signal['Direction']
         rows, status = snapshot_fallback(symbol, direction, fees, window, {'Ticker':symbol, 'Data errors':''})
+        if status.get('Chains loaded'):
+            status['Data errors'] = 'Using fresh published chain feed; direct request not needed.'
         if not status.get('Chains loaded'):
             rows, status = scan_symbol(symbol, direction, fees, window, allow_fallback=False)
         return symbol, {'rows': rows, 'status': status}
@@ -110,7 +112,7 @@ def render():
     else:
         st.success(f"{len(report['rows'])} protected spread research candidates. Every candidate needs live broker and event review.")
     stocks = pd.DataFrame(report['stocks'])
-    signals = stocks[stocks.get('Direction',pd.Series(index=stocks.index,dtype=object)).notna()]
+    signals = stocks[stocks.get('Signal rank',pd.Series(index=stocks.index,dtype=object)).notna()]
     st.subheader('Stock setups and options assessment')
     cols=['Ticker','Signal rank','Signal direction','Stock outcome','Price $','SMA25 $','Deviation %','Stock target $','Stock stop $','Stock reference reward/risk','Spread candidates','Option chains loaded','Option data errors','Signal reason','Price timestamp']
     if not signals.empty:
