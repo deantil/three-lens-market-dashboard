@@ -117,8 +117,19 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                 st.caption("Snapshot updated UTC: "+snapshot.get("generated_at_utc","unknown"))
                 if intraday: st.warning("Full universe snapshot uses daily closing prices, not live five-minute bars.")
             except Exception:
-                st.warning("Full universe snapshot not available until scheduled GitHub Actions scan completes. No partial list is shown as full-market coverage.")
-                return
+                st.warning("Full universe snapshot not ready. Showing a temporary 150-symbol sample, NOT full market coverage.")
+                universe = get_universe(universe_name, watchlist_text)
+                symbols = list(dict.fromkeys(list(entries) + list(universe[:150])))
+                sample = {}
+                for i in range(0,len(symbols),50):
+                    try:
+                        sample.update(fetch_batch(tuple(symbols[i:i+50]),intraday))
+                    except Exception:
+                        pass
+                st.session_state[f"{tab_id}_cached"] = (list(sample.values()),len(symbols),len(universe),0)
+                if not sample:
+                    st.error("Temporary scan returned no usable prices.")
+                    return
         if f"{tab_id}_cached" not in st.session_state:
             with st.spinner("Fetching stock histories for selected universe…"):
                 universe = get_universe(universe_name, watchlist_text)
