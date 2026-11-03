@@ -166,12 +166,16 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         for r in rows:
             reasons=[]
             if r["Price $"] < 5: reasons.append("Price below $5")
-            if r["Avg daily $ volume"] < 20_000_000: reasons.append("Dollar volume below $20M")
-            if r["Day change %"] is not None and abs(r["Day change %"]) >= 20: reasons.append("Extreme daily move")
-            r["Quality"] = "LIQUID · UNVALIDATED" if not reasons else ("REVIEW · UNVALIDATED" if r["Price $"] >= 5 and r["Avg daily $ volume"] >= 10_000_000 else "EXCLUDE · LOW LIQUIDITY")
-            r["Quality notes"] = "; ".join(reasons) if reasons else "Technical pass; news and options unverified"
-        excluded_count=sum(r["Quality"].startswith("EXCLUDE") for r in rows)
+            if r["Avg daily $ volume"] < 10_000_000: reasons.append("Dollar volume below $10M")
+            if r.get("Day change %") is None: reasons.append("Daily change unavailable")
+            elif abs(r["Day change %"]) >= 20: reasons.append("Extreme daily move")
+            if r.get("Reward/risk") is None or r["Reward/risk"] < 2: reasons.append("Reward/risk below 2:1 or unavailable")
+            # Market data alone cannot confirm catalyst, entry trigger, or execution conditions.
+            r["Quality"] = "C · EXCLUDE" if reasons else "B · WATCH — UNCONFIRMED"
+            r["Quality notes"] = "; ".join(reasons) if reasons else "Technical candidate only; trigger, news, earnings and execution unverified"
+        excluded_count=sum(r["Quality"].startswith("C") for r in rows)
         if strict: rows=[r for r in rows if not r["Quality"].startswith("C")]
+        st.caption("Grades: A = verified trade setup (none auto-awarded); B = technical watch candidate requiring confirmation; C = fails screening and is excluded.")
         for r in rows:
             r["Options venue"]="thinkorswim — not connected"
         for r in rows:
@@ -187,14 +191,14 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             st.dataframe(pd.DataFrame(priority)[["Ticker","Research","Price $","Previous close $","Day change %","Deviation %","Quality","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True)
         else:
             st.info("No qualifying large daily declines in this scan.")
-        a_candidates=buy[buy["Quality"]=="LIQUID · UNVALIDATED"] if not buy.empty else buy
-        st.subheader(f"Liquid BUY research candidates — NOT A-grade trades ({len(a_candidates)})")
+        a_candidates=buy[buy["Quality"]=="B · WATCH — UNCONFIRMED"] if not buy.empty else buy
+        st.subheader(f"B-grade BUY watch candidates — NOT confirmed trades ({len(a_candidates)})")
         st.caption("Liquidity screening is not a trade grade. No A-grade BUY designation is awarded without a verified setup, entry trigger, stop, reward/risk, and event-risk checks. News and thinkorswim options are NOT verified.")
         if a_candidates.empty:
-            st.info("No liquid BUY research candidates in this scanned sample.")
+            st.info("No B-grade BUY watch candidates in this scanned sample.")
         else:
             st.dataframe(a_candidates[["Ticker","Research","Quality","Closing price $","SMA25 $","Deviation %","Strategy qualification","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Day change %","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True,column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True),"Research":st.column_config.LinkColumn("Full analysis",display_text="Open research ↗")})
-            st.download_button("Download A-grade shortlist",a_candidates.to_csv(index=False),f"{tab_id}_a_grade.csv","text/csv",key=f"{tab_id}_a_csv")
+            st.download_button("Download B-grade watchlist",a_candidates.to_csv(index=False),f"{tab_id}_b_watch.csv","text/csv",key=f"{tab_id}_a_csv")
         sell_rows=[]
         for r in rows:
             symbol=r["Ticker"]
