@@ -84,7 +84,8 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     sell_threshold = b.number_input("SELL WATCH: % above SMA25", min_value=0.1, value=10.0, step=1.0, key=f"{tab_id}_sell")
     count = c.selectbox("Universe coverage", ["Full selected universe (background snapshot)", "Quick test: 40", "Quick test: 150", "Live full universe (slow)"], index=0, key=f"{tab_id}_count")
     st.caption("Stock quality proxy: $10M average daily dollar volume. BUY list excludes same-day gains above your selected threshold (10% default); this is an adjustable research heuristic, not a validated edge. Options-chain validation is separate in thinkorswim.")
-    strict = st.checkbox("Require liquid stocks (exclude C-grade)", value=True, key=f"{tab_id}_strict")
+    strict = True
+    st.caption("C-grade stocks are always excluded from discovery lists.")
     max_rebound = st.number_input("Maximum same-day gain for BUY candidates (%)", min_value=0.0, max_value=100.0, value=10.0, step=1.0, key=f"{tab_id}_max_rebound")
     st.caption("SELL exits require a recorded buy entry. Enter ticker, actual buy price, and optional stop below (one position per line).")
     positions_text = st.text_area("My recorded stock entries (TICKER,BUY_PRICE,STOP_PRICE)",placeholder="AAPL,150,140",key=f"{tab_id}_entries")
