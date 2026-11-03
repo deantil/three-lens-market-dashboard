@@ -34,6 +34,16 @@ class ConnectedUI(unittest.TestCase):
         self.assertFalse(app.success)
         self.assertEqual(app.session_state['kotegawa_options_report']['stocks'][0]['Stock outcome'],'DATA UNAVAILABLE — OPTIONS')
 
+    def test_default_net_return_filter_rejects_fee_heavy_spread(self):
+        from kotegawa_options_scanner import run_connected_scan
+        row=dict(candidate()[0], **{'Long strike':78.5,'Long contract':'AAPL261113P00078500',
+            'Credit / share $':.05,'Max loss incl fees $':48.,'Max net profit $':2.,'Return on risk %':4.17})
+        with patch('kotegawa_options_scanner.snapshot_fallback',return_value=([row],{'Chains loaded':1,'Data errors':''})):
+            report=run_connected_scan(self.snapshot())
+        self.assertFalse(report['rows'])
+        self.assertEqual(report['stocks'][0]['Stock outcome'],'NO SUITABLE TRADE')
+        self.assertEqual(report['stocks'][0]['Below minimum net return'],1)
+
     def test_existing_dashboard_tabs_are_preserved(self):
         app=AppTest.from_file('streamlit_app.py',default_timeout=40).run()
         self.assertFalse(app.exception)

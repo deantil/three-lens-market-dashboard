@@ -21,7 +21,8 @@ def load_stock_snapshot():
     return data
 
 def run_connected_scan(snapshot, fees=3., window='7–45 DTE', limit=20,
-                       buy_threshold=20., sell_threshold=10., max_rebound=10., progress=None):
+                       buy_threshold=20., sell_threshold=10., max_rebound=10., progress=None,
+                       min_return=20.):
     selection = select_stock_signals(snapshot['rows'], snapshot.get('generated_at_utc'),
         buy_threshold=buy_threshold, sell_threshold=sell_threshold, max_rebound=max_rebound)
     chosen = selection['signals'][:limit]
@@ -34,6 +35,9 @@ def run_connected_scan(snapshot, fees=3., window='7–45 DTE', limit=20,
             status['Data errors'] = 'Using fresh published chain feed; direct request not needed.'
         if not status.get('Chains loaded'):
             rows, status = scan_symbol(symbol, direction, fees, window, allow_fallback=False)
+        rejected = len([r for r in rows if r['Return on risk %'] < min_return])
+        status['Net return filter rejected'] = rejected
+        rows = [r for r in rows if r['Return on risk %'] >= min_return]
         return symbol, {'rows': rows, 'status': status}
     if chosen:
         with ThreadPoolExecutor(max_workers=3) as pool:
@@ -48,6 +52,10 @@ def run_connected_scan(snapshot, fees=3., window='7–45 DTE', limit=20,
     report = attach_spread_candidates(selection, reports)
     skipped = {s['Ticker'] for s in selection['signals'][limit:]}
     for stock in report['stocks']:
+        rejected = reports.get(stock['Ticker'],{}).get('status',{}).get('Net return filter rejected',0)
+        stock['Below minimum net return'] = rejected
+        if rejected and stock['Stock outcome'] == 'NO SUITABLE TRADE':
+            stock['Option data errors'] += f' {rejected} risk-qualified spreads rejected: net return below {min_return}%.'
         if stock['Ticker'] in skipped:
             stock['Stock outcome'] = 'OPTIONS NOT ASSESSED — RUN LIMIT'
     report['coverage']['option_data_unavailable'] = sum(s['Stock outcome']=='DATA UNAVAILABLE — OPTIONS' for s in report['stocks'])
@@ -55,8 +63,9 @@ def run_connected_scan(snapshot, fees=3., window='7–45 DTE', limit=20,
         stock_snapshot_utc=snapshot.get('generated_at_utc'),
         universe_size=snapshot.get('universe_size',len(snapshot['rows'])),
         failed_stock_symbols=snapshot.get('failed_symbols',[]),
+        missing_stock_histories=max(len(snapshot.get('failed_symbols',[])),snapshot.get('universe_size',len(snapshot['rows']))-len(snapshot['rows'])),
         settings={'fees':fees,'window':window,'option_stocks_requested':len(chosen),'option_stocks_deferred':len(skipped),
-                  'buy_threshold':buy_threshold,'sell_threshold':sell_threshold,'max_rebound':max_rebound})
+                  'buy_threshold':buy_threshold,'sell_threshold':sell_threshold,'max_rebound':max_rebound,'minimum_net_return_on_risk_pct':min_return})
     return report
 
 def render():
@@ -67,7 +76,7 @@ def render():
     b.metric('Maximum planned risk', '$50 including fees')
     c.metric('Position size', '1 protected spread')
     st.write('Scan stocks first, then evaluate bull put spreads for bullish mean-reversion setups and bear call spreads for bearish overextension setups. Each spread has a protective long option on the same stock and expiration.')
-    st.caption('Kotegawa-inspired research rules: price ≥$5, average daily dollar volume ≥$10M, daily move under 20%, reference stock reward/risk ≥2. Bullish target is SMA25; bearish screening is a symmetric research extension, with a mirrored stop-distance proxy. These rules are not a verified reconstruction or a proven edge.')
+    st.caption('Kotegawa-inspired research rules: price ≥5 USD, average daily dollar volume ≥10M USD, daily move under 20%, reference stock reward/risk ≥2. Bullish target is SMA25; bearish screening is a symmetric research extension, with a mirrored stop-distance proxy. These rules are not a verified reconstruction or a proven edge.')
     with st.form('kotegawa_options_form'):
         a,b,c = st.columns(3)
         buy = a.number_input('Bullish: % below SMA25',min_value=0.1,value=20.,step=1.)
@@ -77,6 +86,8 @@ def render():
         window = a.selectbox('Options expiration range',['7–45 DTE','7–14 DTE','30–45 DTE'])
         fees = b.number_input('Total opening + closing fees ($)',min_value=3.,value=3.,step=.1)
         limit = c.selectbox('Top stock setups to assess options',[10,20,40],index=1)
+        min_return = st.number_input('Minimum net return on planned risk (%)',min_value=0.,value=20.,step=5.)
+        st.caption('Default 20% net return on risk is an adjustable research filter, not an expected return or proven edge. It excludes spreads where fees consume most of the credit.')
         st.caption('All available stock histories are screened. Options requests are bounded to the top setups shown above; remaining setups are explicitly marked not assessed. Default $3 fees are an estimate; increase for actual charges.')
         run = st.form_submit_button('Run stock → options scan',type='primary')
     if run:
@@ -86,7 +97,7 @@ def render():
             with st.spinner('Discovering stocks, then checking option chains…'):
                 snapshot = load_stock_snapshot()
                 progress = st.progress(0.)
-                st.session_state['kotegawa_options_report'] = run_connected_scan(snapshot,fees,window,limit,buy,sell,rebound,progress.progress)
+                st.session_state['kotegawa_options_report'] = run_connected_scan(snapshot,fees,window,limit,buy,sell,rebound,progress.progress,min_return)
                 progress.empty()
         except Exception as exc:
             st.session_state.pop('kotegawa_options_report',None)
@@ -103,7 +114,7 @@ def render():
     b.metric('Stock setups',coverage['eligible_signals'])
     c.metric('Spread candidates',len(report['rows']))
     d.metric('Options data unavailable',coverage['option_data_unavailable'])
-    st.caption(f"Published universe: {report['universe_size']} requested symbols; {len(report['failed_stock_symbols'])} histories failed upstream. Stock dates must be within four calendar days; option snapshots must be within 20 minutes. Retrieval time does not verify quote freshness.")
+    st.caption(f"Published universe: {report['universe_size']} requested symbols; {report['missing_stock_histories']} histories unavailable upstream. Stock dates must be within four calendar days; option snapshots must be within 20 minutes. Retrieval time does not verify quote freshness.")
     for error in report['errors']: st.error(error)
     if not coverage['eligible_signals']:
         st.info('No stock setups passed the selected rules in the usable data. Review stock coverage below.')
