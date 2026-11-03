@@ -1,0 +1,28 @@
+name: Full Universe Stock Scan
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 21 * * 1-5'
+permissions:
+  contents: write
+concurrency:
+  group: full-universe-stock-scan
+  cancel-in-progress: false
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python full_universe_job.py
+      - name: Commit completed snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/full_universe_daily.json.gz
+          git diff --cached --quiet || (git commit -m "Refresh full universe scan snapshot" && git push)
