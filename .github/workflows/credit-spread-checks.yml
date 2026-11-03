@@ -2,7 +2,7 @@ name: Credit spread scanner checks
 on:
   push:
     branches: [main]
-    paths: ['credit_spread_*.py', 'test_credit_spread*.py', 'streamlit_app.py', '.github/workflows/credit-spread-checks.yml']
+    paths: ['credit_spread_*.py', 'test_credit_spread*.py', 'streamlit_app.py', 'requirements.txt', '.github/workflows/credit-spread-checks.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
-      - run: python -m unittest test_credit_spreads test_credit_spread_ui -v
+      - run: python -m unittest test_credit_spreads test_credit_spread_ui test_credit_spread_success_ui -v
       - name: Read-only live data probe
         run: |
           python - <<'PY'
