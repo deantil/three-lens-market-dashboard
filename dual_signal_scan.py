@@ -73,7 +73,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     sell_threshold = b.number_input("SELL WATCH: % above SMA25", min_value=0.1, value=10.0, step=1.0, key=f"{tab_id}_sell")
     count = c.selectbox("Max symbols per scan", [20, 40, 80, 150], index=1, key=f"{tab_id}_count")
     st.caption("Stock quality proxy: $10M average daily dollar volume. BUY list excludes same-day gains above your selected threshold (10% default); this is an adjustable research heuristic, not a validated edge. Options-chain validation is separate in thinkorswim.")
-    strict = st.checkbox("Show only stocks passing stock-liquidity proxy", value=False, key=f"{tab_id}_strict")
+    strict = st.checkbox("Require liquid stocks (exclude C-grade)", value=True, key=f"{tab_id}_strict")
     max_rebound = st.number_input("Maximum same-day gain for BUY candidates (%)", min_value=0.0, max_value=100.0, value=10.0, step=1.0, key=f"{tab_id}_max_rebound")
     st.caption("SELL exits require a recorded buy entry. Enter ticker, actual buy price, and optional stop below (one position per line).")
     positions_text = st.text_area("My recorded stock entries (TICKER,BUY_PRICE,STOP_PRICE)",placeholder="AAPL,150,140",key=f"{tab_id}_entries")
@@ -120,7 +120,8 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             if r["Day change %"] is not None and abs(r["Day change %"]) >= 20: reasons.append("Extreme daily move")
             r["Quality"] = "A · TECHNICAL ONLY" if not reasons else ("B · REVIEW" if r["Price $"] >= 5 and r["Avg daily $ volume"] >= 10_000_000 else "C · EXCLUDE")
             r["Quality notes"] = "; ".join(reasons) if reasons else "Technical pass; news and options unverified"
-        if strict: rows=[r for r in rows if r["Liquidity proxy"]=="PASS"]
+        excluded_count=sum(r["Quality"].startswith("C") for r in rows)
+        if strict: rows=[r for r in rows if not r["Quality"].startswith("C")]
         for r in rows:
             r["Options venue"]="thinkorswim — not connected"
         buy = pd.DataFrame([dict(r, Signal="BUY WATCH") for r in rows if r["Deviation %"] <= -buy_threshold and r.get("Day change %") is not None and r["Day change %"] <= max_rebound])
@@ -155,6 +156,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                 sell_rows.append(dict(r, **{"Actual buy entry $":None,"Sell reference $":r["Price $"],
                                          "Exit target $":None,"Signal":"OVEREXTENDED — NO RECORDED ENTRY"}))
         sell=pd.DataFrame(sell_rows)
+        st.caption(f"Excluded {excluded_count} C-grade stocks from the displayed lists when the liquidity/quality filter is enabled.")
         st.caption(f"Scanned {len(symbols)} requested tickers · {len(rows)} usable price histories · {len(failures)} failed batches. Market data can be delayed; check each timestamp.")
         st.markdown("### BUY candidates — ticker, entry, target and stop")
         if True:
