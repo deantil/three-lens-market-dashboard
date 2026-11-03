@@ -75,6 +75,7 @@ def render():
     a.metric('Strategy account', '$5,000')
     b.metric('Maximum planned risk', '$50 including fees')
     c.metric('Position size', '1 protected spread')
+    st.caption('This workflow uses the fixed 5,000 USD strategy account and 50 USD risk cap above. The left sidebar account and universe settings belong to the existing stock tools; this scan uses the published US listed-stock universe.')
     st.write('Scan stocks first, then evaluate bull put spreads for bullish mean-reversion setups and bear call spreads for bearish overextension setups. Each spread has a protective long option on the same stock and expiration.')
     st.caption('Kotegawa-inspired research rules: price ≥5 USD, average daily dollar volume ≥10M USD, daily move under 20%, reference stock reward/risk ≥2. Bullish target is SMA25; bearish screening is a symmetric research extension, with a mirrored stop-distance proxy. These rules are not a verified reconstruction or a proven edge.')
     with st.form('kotegawa_options_form'):
@@ -124,6 +125,8 @@ def render():
         st.success(f"{len(report['rows'])} protected spread research candidates. Every candidate needs live broker and event review.")
     stocks = pd.DataFrame(report['stocks'])
     signals = stocks[stocks.get('Signal rank',pd.Series(index=stocks.index,dtype=object)).notna()]
+    if not signals.empty:
+        signals = signals.sort_values('Signal rank')
     st.subheader('Stock setups and options assessment')
     cols=['Ticker','Signal rank','Signal direction','Stock outcome','Price $','SMA25 $','Deviation %','Stock target $','Stock stop $','Stock reference reward/risk','Spread candidates','Option chains loaded','Option data errors','Signal reason','Price timestamp']
     if not signals.empty:
