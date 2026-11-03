@@ -161,9 +161,9 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             if r["Price $"] < 5: reasons.append("Price below $5")
             if r["Avg daily $ volume"] < 20_000_000: reasons.append("Dollar volume below $20M")
             if r["Day change %"] is not None and abs(r["Day change %"]) >= 20: reasons.append("Extreme daily move")
-            r["Quality"] = "A · TECHNICAL ONLY" if not reasons else ("B · REVIEW" if r["Price $"] >= 5 and r["Avg daily $ volume"] >= 10_000_000 else "C · EXCLUDE")
+            r["Quality"] = "LIQUID · UNVALIDATED" if not reasons else ("REVIEW · UNVALIDATED" if r["Price $"] >= 5 and r["Avg daily $ volume"] >= 10_000_000 else "EXCLUDE · LOW LIQUIDITY")
             r["Quality notes"] = "; ".join(reasons) if reasons else "Technical pass; news and options unverified"
-        excluded_count=sum(r["Quality"].startswith("C") for r in rows)
+        excluded_count=sum(r["Quality"].startswith("EXCLUDE") for r in rows)
         if strict: rows=[r for r in rows if not r["Quality"].startswith("C")]
         for r in rows:
             r["Options venue"]="thinkorswim — not connected"
@@ -180,11 +180,11 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             st.dataframe(pd.DataFrame(priority)[["Ticker","Research","Price $","Previous close $","Day change %","Deviation %","Quality","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True)
         else:
             st.info("No qualifying large daily declines in this scan.")
-        a_candidates=buy[buy["Quality"]=="A · TECHNICAL ONLY"] if not buy.empty else buy
-        st.subheader(f"A-grade technical BUY shortlist ({len(a_candidates)})")
-        st.caption("A grade uses stock price, dollar-volume liquidity and daily price stability; reward/risk is shown for trade planning only. News and thinkorswim options are NOT verified.")
+        a_candidates=buy[buy["Quality"]=="LIQUID · UNVALIDATED"] if not buy.empty else buy
+        st.subheader(f"Liquid BUY research candidates — NOT A-grade trades ({len(a_candidates)})")
+        st.caption("Liquidity screening is not a trade grade. No A-grade BUY designation is awarded without a verified setup, entry trigger, stop, reward/risk, and event-risk checks. News and thinkorswim options are NOT verified.")
         if a_candidates.empty:
-            st.info("No A-grade technical BUY candidates in this scanned sample.")
+            st.info("No liquid BUY research candidates in this scanned sample.")
         else:
             st.dataframe(a_candidates[["Ticker","Research","Quality","Closing price $","SMA25 $","Deviation %","Strategy qualification","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Day change %","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True,column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True),"Research":st.column_config.LinkColumn("Full analysis",display_text="Open research ↗")})
             st.download_button("Download A-grade shortlist",a_candidates.to_csv(index=False),f"{tab_id}_a_grade.csv","text/csv",key=f"{tab_id}_a_csv")
