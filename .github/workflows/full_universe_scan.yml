@@ -1,5 +1,11 @@
 name: Full Universe Stock Scan
 on:
+  push:
+    branches: [main]
+    paths:
+      - "full_universe_job.py"
+      - "dual_signal_scan.py"
+      - ".github/workflows/full_universe_scan.yml"
   workflow_dispatch:
   schedule:
     - cron: '15 21 * * 1-5'
