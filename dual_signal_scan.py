@@ -120,6 +120,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             r["Quality"] = "A · TECHNICAL ONLY" if not reasons else ("B · REVIEW" if r["Price $"] >= 5 and r["Avg daily $ volume"] >= 10_000_000 else "C · EXCLUDE")
             r["Quality notes"] = "; ".join(reasons) if reasons else "Technical pass; news and options unverified"
         if strict: rows=[r for r in rows if r["Liquidity proxy"]=="PASS"]
+        for r in rows:
             r["Options venue"]="thinkorswim — not connected"
         buy = pd.DataFrame([dict(r, Signal="BUY WATCH") for r in rows if r["Deviation %"] <= -buy_threshold and r.get("Day change %") is not None and r["Day change %"] <= max_rebound])
         a_candidates=buy[buy["Quality"]=="A · TECHNICAL ONLY"] if not buy.empty else buy
