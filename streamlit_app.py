@@ -15,6 +15,7 @@ import real_estate
 import kotegawa_scan
 import intraday_actions
 import dual_signal_scan
+import credit_spread_scanner
 
 st.set_page_config(page_title="Three Lens Market Dashboard", page_icon="📈", layout="wide")
 
@@ -352,7 +353,9 @@ if not results.empty:
     c.metric("Passing breakout + volume", f"{((results['Breakout'] == 'Yes') & (results['Volume confirms'] == 'Yes')).sum():,}")
     st.caption("Read the boxes left to right: symbols with data have price history; price/volume-qualified pass your sidebar filters; passing breakout + volume also need a 20-day-high breakout and today's volume at least 1.5× its recent average. A zero means none meet both checks today.")
 
-tab1, tab2, tab6, tab7 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Kotegawa Mean Reversion", "4 · Intraday Buy / Sell"])
+tab1, tab2, tab6, tab7, credit_tab = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Kotegawa Mean Reversion", "4 · Intraday Buy / Sell", "5 · Credit Spread Scanner"])
+with credit_tab:
+    credit_spread_scanner.render()
 with tab6:
     dual_signal_scan.render("tab11", universe_name, watchlist_text, get_universe, intraday=False)
 

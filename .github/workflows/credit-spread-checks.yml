@@ -1,0 +1,35 @@
+name: Credit spread scanner checks
+on:
+  push:
+    branches: [main]
+    paths: ['credit_spread_*.py', 'test_credit_spread*.py', 'streamlit_app.py', '.github/workflows/credit-spread-checks.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python -m unittest test_credit_spreads test_credit_spread_ui -v
+      - name: Read-only live data probe
+        run: |
+          python - <<'PY'
+          import json
+          from credit_spread_scanner import run_scan
+          report = run_scan(['AAPL', 'F', 'SOFI'], 'Both', 3.0, '7–45 DTE')
+          print('LIVE_SCAN_REPORT=' + json.dumps(report, default=str))
+          with open('credit-scan-verification.json', 'w') as f:
+              json.dump(report, f, indent=2, default=str)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: credit-scan-verification
+          path: credit-scan-verification.json
+
