@@ -41,6 +41,8 @@ def fetch_batch(symbols, intraday):
             price, stamp = latest.get(symbol, (float(x["Close"].iloc[-1]), str(x.index[-1])))
             if price <= 0 or sma <= 0:
                 continue
+            previous_close = float(completed["Close"].iloc[-1]) if intraday else float(completed["Close"].iloc[-2])
+            day_change = (price / previous_close - 1) * 100 if previous_close > 0 else None
             recent_low = float(completed["Low"].tail(5).min())
             stop = min(recent_low, price) * 0.99
             avg_dollar = float((completed["Close"].tail(20) * completed["Volume"].tail(20)).mean())
@@ -56,7 +58,7 @@ def fetch_batch(symbols, intraday):
                            "Avg daily $ volume":round(avg_dollar),
                            "RSI14":round(rsi,1),
                            "Liquidity proxy":"PASS" if avg_dollar >= 10_000_000 else "LOW",
-                           "Ticker":symbol, "Price $":round(price,2), "SMA25 $":round(sma,2),
+                           "Ticker":symbol, "Price $":round(price,2), "Previous close $":round(previous_close,2), "Day change %":round(day_change,2) if day_change is not None else None, "SMA25 $":round(sma,2),
                            "Deviation %":round((price/sma-1)*100,2),
                            "Price timestamp":stamp, "Source":"5m snapshot" if symbol in latest else "daily close"}
         except (KeyError, ValueError, TypeError):
@@ -70,8 +72,9 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     buy_threshold = a.number_input("BUY: % below SMA25", min_value=0.1, value=20.0, step=1.0, key=f"{tab_id}_buy")
     sell_threshold = b.number_input("SELL WATCH: % above SMA25", min_value=0.1, value=10.0, step=1.0, key=f"{tab_id}_sell")
     count = c.selectbox("Max symbols per scan", [20, 40, 80, 150], index=1, key=f"{tab_id}_count")
-    st.caption("Stock quality proxy: $10M average daily dollar volume. Options-chain validation will be performed separately in thinkorswim, not Yahoo Finance.")
+    st.caption("Stock quality proxy: $10M average daily dollar volume. BUY list excludes same-day gains above your selected threshold (10% default); this is an adjustable research heuristic, not a validated edge. Options-chain validation is separate in thinkorswim.")
     strict = st.checkbox("Show only stocks passing stock-liquidity proxy", value=False, key=f"{tab_id}_strict")
+    max_rebound = st.number_input("Maximum same-day gain for BUY candidates (%)", min_value=0.0, max_value=100.0, value=10.0, step=1.0, key=f"{tab_id}_max_rebound")
     st.caption("SELL exits require a recorded buy entry. Enter ticker, actual buy price, and optional stop below (one position per line).")
     positions_text = st.text_area("My recorded stock entries (TICKER,BUY_PRICE,STOP_PRICE)",placeholder="AAPL,150,140",key=f"{tab_id}_entries")
     entries={}
@@ -112,7 +115,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         for r in rows:
             r["Quality"] = ("B" if r["Liquidity proxy"]=="PASS" else "C") + (" · oversold" if r["RSI14"]<30 else "")
             r["Options venue"]="thinkorswim — not connected"
-        buy = pd.DataFrame([dict(r, Signal="BUY WATCH") for r in rows if r["Deviation %"] <= -buy_threshold])
+        buy = pd.DataFrame([dict(r, Signal="BUY WATCH") for r in rows if r["Deviation %"] <= -buy_threshold and r.get("Day change %") is not None and r["Day change %"] <= max_rebound])
         sell_rows=[]
         for r in rows:
             symbol=r["Ticker"]
@@ -137,7 +140,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             if buy.empty: st.info("No stocks currently meet the BUY threshold in this sample.")
             else:
                 buy=buy.sort_values("Deviation %")
-                columns=["Ticker","Signal","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Deviation %","Quality","Liquidity proxy","Avg daily $ volume","RSI14","Price timestamp","Source"]
+                columns=["Ticker","Signal","Previous close $","Day change %","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Deviation %","Quality","Liquidity proxy","Avg daily $ volume","RSI14","Price timestamp","Source"]
                 st.dataframe(buy[[c for c in columns if c in buy.columns]], hide_index=True, use_container_width=True, column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)}, height=340)
                 st.download_button("Download BUY CSV", buy.to_csv(index=False), f"{tab_id}_buy.csv","text/csv",key=f"{tab_id}_buy_csv")
         st.markdown("### SELL / EXIT candidates — ticker and recorded entry")
@@ -146,7 +149,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             if sell.empty: st.info("No stocks currently meet the SELL threshold in this sample.")
             else:
                 sell=sell.sort_values("Deviation %",ascending=False)
-                columns=["Ticker","Signal","Actual buy entry $","Sell reference $","Exit target $","Exit stop $","Return since buy %","Deviation %","Quality","Price timestamp","Source"]
+                columns=["Ticker","Signal","Actual buy entry $","Sell reference $","Day change %","Exit target $","Exit stop $","Return since buy %","Deviation %","Quality","Price timestamp","Source"]
                 st.dataframe(sell[[c for c in columns if c in sell.columns]], hide_index=True, use_container_width=True, column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)}, height=340)
                 st.download_button("Download SELL CSV",sell.to_csv(index=False),f"{tab_id}_sell.csv","text/csv",key=f"{tab_id}_sell_csv")
         if failures:
