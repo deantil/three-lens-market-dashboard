@@ -72,7 +72,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     a,b,c = st.columns(3)
     buy_threshold = a.number_input("BUY: % below SMA25", min_value=0.1, value=20.0, step=1.0, key=f"{tab_id}_buy")
     sell_threshold = b.number_input("SELL WATCH: % above SMA25", min_value=0.1, value=10.0, step=1.0, key=f"{tab_id}_sell")
-    count = c.selectbox("Universe coverage", ["Full selected universe", "Quick test: 40", "Quick test: 150"], index=0, key=f"{tab_id}_count")
+    count = c.selectbox("Universe coverage", ["Quick test: 40", "Quick test: 150", "Full selected universe"], index=0, key=f"{tab_id}_count")
     st.caption("Stock quality proxy: $10M average daily dollar volume. BUY list excludes same-day gains above your selected threshold (10% default); this is an adjustable research heuristic, not a validated edge. Options-chain validation is separate in thinkorswim.")
     strict = st.checkbox("Require liquid stocks (exclude C-grade)", value=True, key=f"{tab_id}_strict")
     max_rebound = st.number_input("Maximum same-day gain for BUY candidates (%)", min_value=0.0, max_value=100.0, value=10.0, step=1.0, key=f"{tab_id}_max_rebound")
@@ -94,33 +94,37 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     st.caption("Options-chain assessment is reserved for thinkorswim/Schwab; this dashboard does not claim to validate options liquidity.")
     if st.button("Refresh BUY and SELL lists", type="primary", key=f"{tab_id}_run"):
         st.session_state[f"{tab_id}_requested"] = True
+        st.session_state.pop(f"{tab_id}_cached", None)
     if not st.session_state.get(f"{tab_id}_requested"):
         st.info("Click Refresh BUY and SELL lists to scan the selected sidebar universe.")
         return
     try:
-        with st.spinner("Fetching stock histories for selected universe…"):
-            universe = get_universe(universe_name, watchlist_text)
-            limit = None if count == "Full selected universe" else int(count.rsplit(" ",1)[-1])
-            symbols = list(dict.fromkeys(list(entries) + (universe if limit is None else universe[:limit])))
-            if not symbols:
-                st.warning("The selected universe contains no symbols.")
-                return
-            results = {}
-            failures = []
-            progress = st.progress(0)
-            for i in range(0,len(symbols),50):
-                batch = symbols[i:i+50]
-                try:
-                    results.update(fetch_batch(tuple(batch), intraday))
-                except Exception as e:
-                    failures.append(str(e)[:120])
-                progress.progress(min(1.0,(i+len(batch))/len(symbols)))
-            progress.empty()
-        rows = list(results.values())
+        if f"{tab_id}_cached" not in st.session_state:
+            with st.spinner("Fetching stock histories for selected universe…"):
+                universe = get_universe(universe_name, watchlist_text)
+                limit = None if count == "Full selected universe" else int(count.rsplit(" ",1)[-1])
+                symbols = list(dict.fromkeys(list(entries) + (universe if limit is None else universe[:limit])))
+                if not symbols:
+                    st.warning("The selected universe contains no symbols.")
+                    return
+                results = {}
+                failures = []
+                progress = st.progress(0)
+                for i in range(0,len(symbols),50):
+                    batch = symbols[i:i+50]
+                    try:
+                        results.update(fetch_batch(tuple(batch), intraday))
+                    except Exception as e:
+                        failures.append(str(e)[:120])
+                    progress.progress(min(1.0,(i+len(batch))/len(symbols)))
+                progress.empty()
+            st.session_state[f"{tab_id}_cached"] = (list(results.values()), len(symbols), len(universe), len(failures))
+        rows, scanned_count, universe_count, failure_count = st.session_state[f"{tab_id}_cached"]
+        rows = [dict(r) for r in rows]
         for r in rows:
             r["Research"] = "https://three-lens-market-dashboard.streamlit.app/stock_research?symbol=" + r["Ticker"]
         st.caption("Use the **Full analysis** link beside each ticker to open its dedicated research page in a new browser tab.")
-        st.caption(f"Universe coverage: {len(symbols)} of {len(universe)} selected symbols requested; {len(rows)} returned usable data. Full coverage may be incomplete if data requests fail or time out.")
+        st.caption(f"Universe coverage: {scanned_count} of {universe_count} selected symbols requested; {len(rows)} returned usable data. Full coverage may be incomplete if data requests fail or time out.")
         for r in rows:
             reasons=[]
             if r["Price $"] < 5: reasons.append("Price below $5")
@@ -185,7 +189,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         if not entries:
             st.info("No buy entries have been recorded. An actual entry price and realized return cannot be calculated without a recorded purchase.")
         st.caption(f"Excluded {excluded_count} C-grade stocks from the displayed lists when the liquidity/quality filter is enabled.")
-        st.caption(f"Scanned {len(symbols)} requested tickers · {len(rows)} usable price histories · {len(failures)} failed batches. Market data can be delayed; check each timestamp.")
+        st.caption(f"Scanned {scanned_count} requested tickers · {len(rows)} usable price histories · {failure_count} failed batches. Market data can be delayed; check each timestamp.")
         st.markdown("### BUY candidates — ticker, entry, target and stop")
         if True:
             st.subheader(f"BUY watchlist ({len(buy)})")
@@ -204,7 +208,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                 columns=["Ticker","Signal","Closing price $","SMA25 $","Deviation %","Strategy qualification","Actual buy entry $","Sell reference $","Day change %","Exit target $","Exit stop $","Return since buy %","Deviation %","Quality","Price timestamp","Source"]
                 st.dataframe(sell[[c for c in columns if c in sell.columns]], hide_index=True, use_container_width=True, column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)}, height=340)
                 st.download_button("Download SELL CSV",sell.to_csv(index=False),f"{tab_id}_sell.csv","text/csv",key=f"{tab_id}_sell_csv")
-        if failures:
+        if failure_count:
             st.warning("Some data batches failed; results are incomplete. Retry with fewer symbols.")
         st.caption("Recorded entries are session inputs, not verified broker fills; they may be lost on app restart. SELL WATCH is a price-screening condition only. It does not indicate you hold the stock or should sell short. Intraday quotes may be delayed; if 5-minute data is missing, daily close is explicitly labeled. No orders are placed.")
     except Exception as e:
