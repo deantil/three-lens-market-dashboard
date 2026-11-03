@@ -116,7 +116,6 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             reasons=[]
             if r["Price $"] < 5: reasons.append("Price below $5")
             if r["Avg daily $ volume"] < 20_000_000: reasons.append("Dollar volume below $20M")
-            if r["Reward/risk"] is None or r["Reward/risk"] < 2: reasons.append("Reward/risk below 2")
             if r["Day change %"] is not None and abs(r["Day change %"]) >= 20: reasons.append("Extreme daily move")
             r["Quality"] = "A · TECHNICAL ONLY" if not reasons else ("B · REVIEW" if r["Price $"] >= 5 and r["Avg daily $ volume"] >= 10_000_000 else "C · EXCLUDE")
             r["Quality notes"] = "; ".join(reasons) if reasons else "Technical pass; news and options unverified"
@@ -133,7 +132,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             st.info("No qualifying large daily declines in this scan.")
         a_candidates=buy[buy["Quality"]=="A · TECHNICAL ONLY"] if not buy.empty else buy
         st.subheader(f"A-grade technical BUY shortlist ({len(a_candidates)})")
-        st.caption("Provisional technical grade only; news and thinkorswim options chain are NOT verified.")
+        st.caption("A grade uses stock price, dollar-volume liquidity and daily price stability; reward/risk is shown for trade planning only. News and thinkorswim options are NOT verified.")
         if a_candidates.empty:
             st.info("No A-grade technical BUY candidates in this scanned sample.")
         else:
