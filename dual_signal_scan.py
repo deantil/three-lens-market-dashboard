@@ -117,6 +117,9 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                 progress.progress(min(1.0,(i+len(batch))/len(symbols)))
             progress.empty()
         rows = list(results.values())
+        for r in rows:
+            r["Research"] = "https://three-lens-market-dashboard.streamlit.app/stock_research?symbol=" + r["Ticker"]
+        st.caption("Use the **Full analysis** link beside each ticker to open its dedicated research page in a new browser tab.")
         st.caption(f"Universe coverage: {len(symbols)} of {len(universe)} selected symbols requested; {len(rows)} returned usable data. Full coverage may be incomplete if data requests fail or time out.")
         for r in rows:
             reasons=[]
@@ -139,7 +142,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         st.subheader("Large daily declines — objective research")
         priority=[r for r in rows if r.get("Day change %") is not None and r["Day change %"]<=-15 and r["Price $"]>=5 and r["Avg daily $ volume"]>=10_000_000]
         if priority:
-            st.dataframe(pd.DataFrame(priority)[["Ticker","Price $","Previous close $","Day change %","Deviation %","Quality","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True)
+            st.dataframe(pd.DataFrame(priority)[["Ticker","Research","Price $","Previous close $","Day change %","Deviation %","Quality","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True)
         else:
             st.info("No qualifying large daily declines in this scan.")
         a_candidates=buy[buy["Quality"]=="A · TECHNICAL ONLY"] if not buy.empty else buy
@@ -148,7 +151,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         if a_candidates.empty:
             st.info("No A-grade technical BUY candidates in this scanned sample.")
         else:
-            st.dataframe(a_candidates[["Ticker","Quality","Closing price $","SMA25 $","Deviation %","Strategy qualification","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Day change %","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True,column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)})
+            st.dataframe(a_candidates[["Ticker","Research","Quality","Closing price $","SMA25 $","Deviation %","Strategy qualification","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Day change %","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True,column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True),"Research":st.column_config.LinkColumn("Full analysis",display_text="Open research ↗")})
             st.download_button("Download A-grade shortlist",a_candidates.to_csv(index=False),f"{tab_id}_a_grade.csv","text/csv",key=f"{tab_id}_a_csv")
         sell_rows=[]
         for r in rows:
@@ -177,7 +180,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         if overextended.empty:
             st.info("No stocks above their 25-day SMA in this sample. Broaden the universe for more coverage.")
         else:
-            st.dataframe(overextended[["Ticker","Closing price $","SMA25 $","Deviation %","Day change %","Quality","Price timestamp"]],hide_index=True,use_container_width=True,column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)})
+            st.dataframe(overextended[["Ticker","Research","Closing price $","SMA25 $","Deviation %","Day change %","Quality","Price timestamp"]],hide_index=True,use_container_width=True,column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)})
         st.subheader("Recorded-position exits")
         if not entries:
             st.info("No buy entries have been recorded. An actual entry price and realized return cannot be calculated without a recorded purchase.")
@@ -189,7 +192,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             if buy.empty: st.info("No stocks currently meet the BUY threshold in this sample.")
             else:
                 buy=buy.sort_values("Deviation %")
-                columns=["Ticker","Signal","Closing price $","SMA25 $","Deviation %","Strategy qualification","Previous close $","Day change %","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Deviation %","Quality","Quality notes","Liquidity proxy","Avg daily $ volume","RSI14","Price timestamp","Source"]
+                columns=["Ticker","Research","Signal","Closing price $","SMA25 $","Deviation %","Strategy qualification","Previous close $","Day change %","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Deviation %","Quality","Quality notes","Liquidity proxy","Avg daily $ volume","RSI14","Price timestamp","Source"]
                 st.dataframe(buy[[c for c in columns if c in buy.columns]], hide_index=True, use_container_width=True, column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)}, height=340)
                 st.download_button("Download BUY CSV", buy.to_csv(index=False), f"{tab_id}_buy.csv","text/csv",key=f"{tab_id}_buy_csv")
         st.markdown("### SELL / EXIT candidates — ticker and recorded entry")
