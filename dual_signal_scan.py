@@ -63,39 +63,6 @@ def fetch_batch(symbols, intraday):
             continue
     return out
 
-@st.cache_data(ttl=900, show_spinner=False)
-def option_liquidity(symbol):
-    """Sample nearest available 20–60 DTE ATM call and put. Missing data is UNKNOWN."""
-    try:
-        t = yf.Ticker(symbol)
-        expiries = t.options
-        today = pd.Timestamp.now().date()
-        choices = [e for e in expiries if 20 <= (pd.Timestamp(e).date()-today).days <= 60]
-        if not choices:
-            return {"Options":"UNKNOWN", "Option spread %":None, "ATM open interest":None, "ATM volume":None}
-        chain = t.option_chain(choices[0])
-        q = t.fast_info.get("last_price")
-        if not q:
-            return {"Options":"UNKNOWN"}
-        samples = []
-        for df in (chain.calls,chain.puts):
-            if df.empty: continue
-            contract = df.iloc[(df["strike"]-q).abs().argsort()[:1]].iloc[0]
-            bid,ask = float(contract["bid"]),float(contract["ask"])
-            if bid<=0 or ask<=bid: continue
-            samples.append(((ask-bid)/((ask+bid)/2)*100,
-                            int(contract["openInterest"]) if pd.notna(contract["openInterest"]) else 0,
-                            int(contract["volume"]) if pd.notna(contract["volume"]) else 0))
-        if len(samples)<2: return {"Options":"UNKNOWN"}
-        spread=max(x[0] for x in samples)
-        oi=min(x[1] for x in samples)
-        volume=min(x[2] for x in samples)
-        status="PASS" if spread<=10 and oi>=100 and volume>=10 else "WEAK"
-        return {"Options":status,"Option spread %":round(spread,1),"ATM open interest":oi,"ATM volume":volume}
-    except Exception:
-        return {"Options":"UNKNOWN"}
-
-
 def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     st.header("Kotegawa · BUY and SELL Discovery" if not intraday else "Intraday · BUY and SELL Discovery")
     st.caption("BUY = below SMA25 by selected threshold. SELL WATCH = above SMA25 by selected threshold (potential mean-reversion/overextension, NOT a sell order or short recommendation). No account-size filter.")
@@ -103,7 +70,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     buy_threshold = a.number_input("BUY: % below SMA25", min_value=0.1, value=20.0, step=1.0, key=f"{tab_id}_buy")
     sell_threshold = b.number_input("SELL WATCH: % above SMA25", min_value=0.1, value=10.0, step=1.0, key=f"{tab_id}_sell")
     count = c.selectbox("Max symbols per scan", [20, 40, 80, 150], index=1, key=f"{tab_id}_count")
-    st.caption("Research quality thresholds: $10M average daily stock dollar volume; optional 20–60 DTE near-the-money call/put chain check, max 10% bid-ask spread, at least 100 OI and 10 contracts volume per side. These are screening heuristics, not proven performance rules.")
+    st.caption("Stock quality proxy: $10M average daily dollar volume. Options-chain validation will be performed separately in thinkorswim, not Yahoo Finance.")
     strict = st.checkbox("Show only stocks passing stock-liquidity proxy", value=False, key=f"{tab_id}_strict")
     st.caption("SELL exits require a recorded buy entry. Enter ticker, actual buy price, and optional stop below (one position per line).")
     positions_text = st.text_area("My recorded stock entries (TICKER,BUY_PRICE,STOP_PRICE)",placeholder="AAPL,150,140",key=f"{tab_id}_entries")
@@ -120,8 +87,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             entries[symbol]=(buy_price,stop_price)
         except ValueError:
             st.warning(f"Ignoring invalid entry: {line}")
-    check_options=st.checkbox("Check options-chain quality for matching candidates (slower)",value=False,key=f"{tab_id}_options")
-    st.caption("Options-chain check only runs on the first 10 matching tickers. Others are labeled NOT CHECKED; missing data is UNKNOWN.")
+    st.caption("Options-chain assessment is reserved for thinkorswim/Schwab; this dashboard does not claim to validate options liquidity.")
     if st.button("Refresh BUY and SELL lists", type="primary", key=f"{tab_id}_run"):
         st.session_state[f"{tab_id}_requested"] = True
     if not st.session_state.get(f"{tab_id}_requested"):
@@ -145,12 +111,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         if strict: rows=[r for r in rows if r["Liquidity proxy"]=="PASS"]
         for r in rows:
             r["Quality"] = ("B" if r["Liquidity proxy"]=="PASS" else "C") + (" · oversold" if r["RSI14"]<30 else "")
-            r["Options"]="NOT CHECKED"
-        if check_options:
-            matches=[r for r in rows if r["Deviation %"]<=-buy_threshold or r["Deviation %"]>=sell_threshold or r["Ticker"] in entries]
-            with st.spinner("Checking a small number of options chains…"):
-                for r in matches[:10]:
-                    r.update(option_liquidity(r["Ticker"]))
+            r["Options venue"]="thinkorswim — not connected"
         buy = pd.DataFrame([dict(r, Signal="BUY WATCH") for r in rows if r["Deviation %"] <= -buy_threshold])
         sell_rows=[]
         for r in rows:
@@ -170,20 +131,23 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                                          "Exit target $":None,"Signal":"OVEREXTENDED — NO RECORDED ENTRY"}))
         sell=pd.DataFrame(sell_rows)
         st.caption(f"Scanned {len(symbols)} requested tickers · {len(rows)} usable price histories · {len(failures)} failed batches. Market data can be delayed; check each timestamp.")
-        left,right=st.columns(2)
-        with left:
+        st.markdown("### BUY candidates — ticker, entry, target and stop")
+        if True:
             st.subheader(f"BUY watchlist ({len(buy)})")
             if buy.empty: st.info("No stocks currently meet the BUY threshold in this sample.")
             else:
                 buy=buy.sort_values("Deviation %")
-                st.dataframe(buy, hide_index=True, use_container_width=True)
+                columns=["Ticker","Signal","Entry reference $","Sell target $","Stop reference $","Potential return %","Reward/risk","Deviation %","Quality","Liquidity proxy","Avg daily $ volume","RSI14","Price timestamp","Source"]
+                st.dataframe(buy[[c for c in columns if c in buy.columns]], hide_index=True, use_container_width=True, column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)}, height=340)
                 st.download_button("Download BUY CSV", buy.to_csv(index=False), f"{tab_id}_buy.csv","text/csv",key=f"{tab_id}_buy_csv")
-        with right:
+        st.markdown("### SELL / EXIT candidates — ticker and recorded entry")
+        if True:
             st.subheader(f"SELL watchlist ({len(sell)})")
             if sell.empty: st.info("No stocks currently meet the SELL threshold in this sample.")
             else:
                 sell=sell.sort_values("Deviation %",ascending=False)
-                st.dataframe(sell, hide_index=True, use_container_width=True)
+                columns=["Ticker","Signal","Actual buy entry $","Sell reference $","Exit target $","Exit stop $","Return since buy %","Deviation %","Quality","Price timestamp","Source"]
+                st.dataframe(sell[[c for c in columns if c in sell.columns]], hide_index=True, use_container_width=True, column_config={"Ticker":st.column_config.TextColumn("TICKER",pinned=True)}, height=340)
                 st.download_button("Download SELL CSV",sell.to_csv(index=False),f"{tab_id}_sell.csv","text/csv",key=f"{tab_id}_sell_csv")
         if failures:
             st.warning("Some data batches failed; results are incomplete. Retry with fewer symbols.")
