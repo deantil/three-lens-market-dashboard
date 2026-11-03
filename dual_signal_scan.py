@@ -72,7 +72,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     a,b,c = st.columns(3)
     buy_threshold = a.number_input("BUY: % below SMA25", min_value=0.1, value=20.0, step=1.0, key=f"{tab_id}_buy")
     sell_threshold = b.number_input("SELL WATCH: % above SMA25", min_value=0.1, value=10.0, step=1.0, key=f"{tab_id}_sell")
-    count = c.selectbox("Max symbols per scan", [20, 40, 80, 150], index=1, key=f"{tab_id}_count")
+    count = c.selectbox("Universe coverage", ["Full selected universe", "Quick test: 40", "Quick test: 150"], index=0, key=f"{tab_id}_count")
     st.caption("Stock quality proxy: $10M average daily dollar volume. BUY list excludes same-day gains above your selected threshold (10% default); this is an adjustable research heuristic, not a validated edge. Options-chain validation is separate in thinkorswim.")
     strict = st.checkbox("Require liquid stocks (exclude C-grade)", value=True, key=f"{tab_id}_strict")
     max_rebound = st.number_input("Maximum same-day gain for BUY candidates (%)", min_value=0.0, max_value=100.0, value=10.0, step=1.0, key=f"{tab_id}_max_rebound")
@@ -98,13 +98,18 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         st.info("Click Refresh BUY and SELL lists to scan the selected sidebar universe.")
         return
     try:
-        with st.spinner(f"Fetching latest available prices for up to {count} symbols…"):
-            symbols = list(dict.fromkeys(list(entries) + get_universe(universe_name, watchlist_text)[:count]))
+        with st.spinner("Fetching stock histories for selected universe…"):
+            universe = get_universe(universe_name, watchlist_text)
+            limit = None if count == "Full selected universe" else int(count.rsplit(" ",1)[-1])
+            symbols = list(dict.fromkeys(list(entries) + (universe if limit is None else universe[:limit])))
+            if not symbols:
+                st.warning("The selected universe contains no symbols.")
+                return
             results = {}
             failures = []
             progress = st.progress(0)
-            for i in range(0,len(symbols),10):
-                batch = symbols[i:i+10]
+            for i in range(0,len(symbols),50):
+                batch = symbols[i:i+50]
                 try:
                     results.update(fetch_batch(tuple(batch), intraday))
                 except Exception as e:
@@ -112,7 +117,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                 progress.progress(min(1.0,(i+len(batch))/len(symbols)))
             progress.empty()
         rows = list(results.values())
-        st.caption("Coverage limitation: only the first selected symbols from the chosen universe are screened. This is not a full-market scan.")
+        st.caption(f"Universe coverage: {len(symbols)} of {len(universe)} selected symbols requested; {len(rows)} returned usable data. Full coverage may be incomplete if data requests fail or time out.")
         for r in rows:
             reasons=[]
             if r["Price $"] < 5: reasons.append("Price below $5")
