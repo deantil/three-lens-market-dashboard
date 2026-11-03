@@ -98,7 +98,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         return
     try:
         with st.spinner(f"Fetching latest available prices for up to {count} symbols…"):
-            symbols = list(dict.fromkeys(["INTC"] + list(entries) + get_universe(universe_name, watchlist_text)[:count]))
+            symbols = list(dict.fromkeys(list(entries) + get_universe(universe_name, watchlist_text)[:count]))
             results = {}
             failures = []
             progress = st.progress(0)
@@ -111,6 +111,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                 progress.progress(min(1.0,(i+len(batch))/len(symbols)))
             progress.empty()
         rows = list(results.values())
+        st.caption("Coverage limitation: only the first selected symbols from the chosen universe are screened. This is not a full-market scan.")
         for r in rows:
             reasons=[]
             if r["Price $"] < 5: reasons.append("Price below $5")
@@ -123,7 +124,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         for r in rows:
             r["Options venue"]="thinkorswim — not connected"
         buy = pd.DataFrame([dict(r, Signal="BUY WATCH") for r in rows if r["Deviation %"] <= -buy_threshold and r.get("Day change %") is not None and r["Day change %"] <= max_rebound])
-        st.subheader("Priority research — large daily declines")
+        st.subheader("Large daily declines — objective research")
         priority=[r for r in rows if r.get("Day change %") is not None and r["Day change %"]<=-15 and r["Price $"]>=5 and r["Avg daily $ volume"]>=10_000_000]
         if priority:
             st.dataframe(pd.DataFrame(priority)[["Ticker","Price $","Previous close $","Day change %","Deviation %","Quality","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True)
