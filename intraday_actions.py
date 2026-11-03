@@ -49,16 +49,14 @@ def evaluate(symbol, daily, quote, threshold, capital, risk_budget):
     low = float(completed["Low"].tail(5).min())
     stop = min(low, price) * 0.99
     per_share = price - stop
-    shares = min(int(risk_budget / per_share), int(capital / price)) if per_share > 0 else 0
     avg_dollar = float((completed["Close"].tail(20) * completed["Volume"].tail(20)).mean())
     rr = (sma - price) / per_share if per_share > 0 else 0
-    eligible = deviation <= -threshold and shares > 0 and avg_dollar >= 10_000_000
+    eligible = deviation <= -threshold
     return {
         "Ticker": symbol, "Quote time": stamp, "Price $": round(price, 2),
         "SMA25 $": round(sma, 2), "Deviation %": round(deviation, 2),
         "Stop reference $": round(stop, 2), "Target $": round(sma, 2),
-        "R multiple": round(rr, 2), "Shares": shares,
-        "Planned risk $": round(shares * per_share, 2),
+        "R multiple": round(rr, 2),
         "Avg daily $ volume": round(avg_dollar),
         "Action": "BUY WATCH — confirm reversal" if eligible else "NO ACTION",
     }
@@ -66,11 +64,8 @@ def evaluate(symbol, daily, quote, threshold, capital, risk_budget):
 
 def render(get_universe, get_prices, universe_name, watchlist_text):
     st.header("Intraday Buy / Sell Action Scanner")
-    st.caption("On-demand 5-minute Yahoo Finance price snapshots against the prior 25 completed daily closes. Quotes may be delayed or stale. Not a real-time execution feed.")
-    col1, col2, col3 = st.columns(3)
-    threshold = col1.number_input("Buy deviation below SMA25 (%)", value=20.0, min_value=1.0, max_value=90.0, key="action_threshold")
-    cap = col2.number_input("Account size ($)", value=5000.0, min_value=100.0, key="action_cap")
-    risk = col3.number_input("Max planned risk ($)", value=50.0, min_value=1.0, max_value=50.0, key="action_risk")
+    st.caption("Discovery only: no account-size or risk-based exclusions. On-demand 5-minute Yahoo Finance price snapshots against prior completed daily closes; quotes may be delayed or stale.")
+    threshold = st.number_input("Buy deviation below SMA25 (%)", value=20.0, min_value=1.0, max_value=90.0, key="action_threshold")
     n = st.select_slider("Symbols per refresh", options=[25, 50, 100, 250, 500], value=100, key="action_n")
     holdings = st.text_area("Positions to monitor for SELL/EXIT (ticker, entry price, stop price, shares; one per line)", placeholder="AAPL,150,142,2", key="action_holdings")
     if not st.button("Refresh BUY and SELL lists", type="primary", key="refresh_action"):
@@ -101,7 +96,7 @@ def render(get_universe, get_prices, universe_name, watchlist_text):
         with st.spinner("Fetching daily averages and latest available 5-minute bars…"):
             daily = get_prices(all_symbols)
             intraday = latest_quote(all_symbols)
-        rows = [evaluate(s, daily[s], intraday[s], threshold, cap, risk)
+        rows = [evaluate(s, daily[s], intraday[s], threshold, None, None)
                 for s in symbols if s in daily and s in intraday]
         rows = [r for r in rows if r is not None]
         buy = pd.DataFrame([r for r in rows if r["Action"].startswith("BUY")])
@@ -110,7 +105,7 @@ def render(get_universe, get_prices, universe_name, watchlist_text):
             if symbol not in daily or symbol not in intraday:
                 sell_rows.append({"Ticker": symbol, "Action": "DATA UNAVAILABLE — review manually"})
                 continue
-            result = evaluate(symbol, daily[symbol], intraday[symbol], threshold, cap, risk)
+            result = evaluate(symbol, daily[symbol], intraday[symbol], threshold, None, None)
             if result is None:
                 continue
             price = result["Price $"]
@@ -138,6 +133,6 @@ def render(get_universe, get_prices, universe_name, watchlist_text):
             else:
                 st.dataframe(sell, hide_index=True, use_container_width=True)
                 st.download_button("Download EXIT watchlist", sell.to_csv(index=False), "exit_watch.csv", "text/csv", key="exit_watch_csv")
-        st.warning("BUY WATCH and SELL WATCH are research alerts, not order instructions. Verify current executable quotes, news, halts, liquidity and position details with your broker. Stops can slip or gap; actual losses may exceed $50. No automated orders.")
+        st.warning("BUY WATCH and SELL WATCH are research alerts, not order instructions. Verify current executable quotes, news, halts, liquidity and position details with your broker. Stops can slip or gap; no automated orders.")
     except Exception as exc:
         st.error(f"Unable to refresh action scan: {exc}")
