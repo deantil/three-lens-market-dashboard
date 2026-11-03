@@ -4,10 +4,14 @@ import math
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from credit_spread_scanner import scan_symbol, DEFAULT_SYMBOLS
+from kotegawa_options_scanner import load_stock_snapshot
+from kotegawa_options_engine import select_stock_signals
 
 def main():
     stocks = {}
-    symbols = DEFAULT_SYMBOLS.split()
+    snapshot = load_stock_snapshot()
+    selection = select_stock_signals(snapshot['rows'], snapshot.get('generated_at_utc'))
+    symbols = list(dict.fromkeys([s['Ticker'] for s in selection['signals'][:40]] + DEFAULT_SYMBOLS.split()))
     with ThreadPoolExecutor(max_workers=3) as pool:
         reports = list(pool.map(lambda s: scan_symbol(s, 'Both', 3., '7–45 DTE', stocks, False), symbols))
     # A failed collection cannot silently publish an apparently healthy empty feed.
@@ -15,6 +19,8 @@ def main():
     if not loaded:
         raise RuntimeError('No chains retrieved; existing snapshot remains untouched')
     data = {'collected_utc': datetime.now(timezone.utc).isoformat(), 'stocks': stocks,
+            'discovery_stock_snapshot_utc': snapshot.get('generated_at_utc'),
+            'discovery_signals': len(selection['signals']), 'requested_symbols': symbols,
             'coverage': [status for _, status in reports]}
     def clean(value):
         if isinstance(value, dict):
@@ -28,4 +34,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

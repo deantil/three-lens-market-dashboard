@@ -16,6 +16,7 @@ import kotegawa_scan
 import intraday_actions
 import dual_signal_scan
 import credit_spread_scanner
+import kotegawa_options_scanner
 
 st.set_page_config(page_title="Three Lens Market Dashboard", page_icon="📈", layout="wide")
 
@@ -357,7 +358,9 @@ tab1, tab2, tab6, tab7, credit_tab = st.tabs(["1 · Trader breakout", "2 · Nirv
 with credit_tab:
     credit_spread_scanner.render()
 with tab6:
-    dual_signal_scan.render("tab11", universe_name, watchlist_text, get_universe, intraday=False)
+    kotegawa_options_scanner.render()
+    with st.expander('Existing stock discovery and recorded-position tools'):
+        dual_signal_scan.render("tab11", universe_name, watchlist_text, get_universe, intraday=False)
 
 with tab7:
     dual_signal_scan.render("tab12", universe_name, watchlist_text, get_universe, intraday=True)
@@ -388,3 +391,4 @@ with tab2:
         columns = {"Full analysis": st.column_config.LinkColumn("Full analysis", display_text="Open research")}
         omni = results[results["Omni score"].str[0].astype(int) >= 3].sort_values(["Omni score", "Rel. volume"], ascending=False)
         st.dataframe(omni, hide_index=True, use_container_width=True, column_config=columns)
+
