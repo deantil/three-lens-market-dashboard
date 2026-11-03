@@ -1,4 +1,5 @@
 import gzip
+import hashlib
 import json
 import requests
 """Fast bounded research scanner for both discovery tabs."""
@@ -76,6 +77,12 @@ def load_full_snapshot():
     response.raise_for_status()
     return json.loads(gzip.decompress(response.content).decode("utf-8"))
 
+def representative_sample(universe, limit):
+    """Deterministic ticker-hash sample across the entire selected universe."""
+    if limit is None or len(universe) <= limit:
+        return list(universe)
+    return sorted(universe, key=lambda symbol: hashlib.sha256(symbol.encode("utf-8")).digest())[:limit]
+
 def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
     st.header("Kotegawa · BUY and SELL Discovery" if not intraday else "Intraday · BUY and SELL Discovery")
     st.caption("BUY = below SMA25 by selected threshold. SELL WATCH = above SMA25 by selected threshold (potential mean-reversion/overextension, NOT a sell order or short recommendation). No account-size filter.")
@@ -117,9 +124,9 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
                 st.caption("Snapshot updated UTC: "+snapshot.get("generated_at_utc","unknown"))
                 if intraday: st.warning("Full universe snapshot uses daily closing prices, not live five-minute bars.")
             except Exception:
-                st.warning("Full universe snapshot not ready. Showing a temporary 150-symbol sample, NOT full market coverage.")
+                st.warning("Full universe snapshot not ready. Showing a temporary 150-symbol sample distributed across the selected universe, NOT full market coverage.")
                 universe = get_universe(universe_name, watchlist_text)
-                symbols = list(dict.fromkeys(list(entries) + list(universe[:150])))
+                symbols = list(dict.fromkeys(list(entries) + representative_sample(universe, 150)))
                 sample = {}
                 for i in range(0,len(symbols),50):
                     try:
@@ -134,7 +141,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
             with st.spinner("Fetching stock histories for selected universe…"):
                 universe = get_universe(universe_name, watchlist_text)
                 limit = None if count == "Live full universe (slow)" else int(count.rsplit(" ",1)[-1])
-                symbols = list(dict.fromkeys(list(entries) + (universe if limit is None else universe[:limit])))
+                symbols = list(dict.fromkeys(list(entries) + (representative_sample(universe, limit))))
                 if not symbols:
                     st.warning("The selected universe contains no symbols.")
                     return
