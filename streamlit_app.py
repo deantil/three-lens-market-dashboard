@@ -745,11 +745,3 @@ with tab6:
     else:
         st.info("The dashboard is ready. Click **Load latest paper-agent report** to fetch the paper bot status.")
     st.caption("Paper fills are simulated. Stock/crypto checks run daily; options checks run several times during US sessions, subject to GitHub delays and skipped runs. Options exits are attempted at 50% premium loss or five calendar days before expiry; unfilled exits and gaps remain possible. Weekly reviews compare conservative base/stress stock backtests and archived options quote replays. Rules never change automatically.")
-
-
-with st.expander("How sizing and the goal tracker work"):
-    st.write(f"Risk budget per trade is ${capital * risk_pct / 100:,.2f} at the selected {risk_pct:.2f}% account risk. Reference stops use the lower of the recent 10-day low or a 6% reference distance. Share counts are capped so the position value does not exceed the account balance. Actual fills, gaps, fees, and losses can differ substantially.")
-    st.write("A $1,000 to $10,000 year-end target requires an exceptionally high compounded return, especially late in the year. The dashboard shows the arithmetic pace only; it does not predict or promise that outcome.")
-
-
-
