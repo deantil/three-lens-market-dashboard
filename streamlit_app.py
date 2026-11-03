@@ -346,7 +346,7 @@ if not results.empty:
     c.metric("Passing breakout + volume", f"{((results['Breakout'] == 'Yes') & (results['Volume confirms'] == 'Yes')).sum():,}")
     st.caption("Read the boxes left to right: symbols with data have price history; price/volume-qualified pass your sidebar filters; passing breakout + volume also need a 20-day-high breakout and today's volume at least 1.5× its recent average. A zero means none meet both checks today.")
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia inspired", "4 · Stock lookup", "5 · Options income scan", "6 · $100 paper challenge", "7 · Earnings iron condor alerts", "8 · Options trader tracker", "9 · Real Estate Investments", "10 · Guaranteed Rent"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs(["1 · Trader breakout", "2 · Nirvana Omni inspired", "3 · Birbia inspired", "4 · Stock lookup", "5 · Options income scan", "6 · $100 paper challenge", "7 · Earnings iron condor alerts", "8 · Project T Scan Results", "9 · Real Estate Investments", "10 · Guaranteed Rent"])
 with tab10:
     import streamlit.components.v1 as components
 
@@ -364,7 +364,23 @@ with tab10:
 with tab9:
     real_estate.render()
 with tab8:
-    trader_tracker.render()
+    st.header("Project T · Scan Results")
+    st.caption("Candidate scanner based on the dashboard's existing daily breakout and volume filters. Instagram reel rules have not yet been verified. No options-chain quotes or orders are generated here.")
+    st.metric("Maximum planned loss per trade", "$50")
+    st.caption("Account size: $5,000 · Manual approval required · Live trading disabled")
+    if results.empty:
+        st.info("No scan results loaded. Click 'Scan selected stock universe' in the sidebar to run the stock scan.")
+    else:
+        candidates = results[(results["Breakout"] == "Yes") & (results["Volume confirms"] == "Yes")].copy()
+        if candidates.empty:
+            st.warning("NO TRADE — no symbols pass the existing breakout and volume filters.")
+        else:
+            candidates["Decision"] = "WATCH — option spread validation required"
+            candidates["Strategy"] = "Bull put credit spread candidate"
+            candidates["Max planned loss"] = "$50"
+            st.dataframe(candidates[["Symbol", "Decision", "Strategy", "Price", "Day %", "Rel. volume", "Trigger", "Reference stop", "Max planned loss"]], hide_index=True, use_container_width=True)
+            st.download_button("Download Project T candidates", candidates.to_csv(index=False), "project_t_scan_results.csv", "text/csv", key="project_t_scan_download")
+        st.info("A stock scan alone is not an options trade signal. Contract strikes, expiry, delta, bid/ask, net credit, and maximum spread loss must be verified with a live options chain before any trade is approved.")
 with tab1:
     st.subheader("Trader breakout rules")
     st.caption("A transparent approximation of the rules described in your pasted notes: trend, recent range breakout, momentum, and volume. It is not a reconstruction of a named trader's full system.")
