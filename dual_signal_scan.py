@@ -98,7 +98,7 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         return
     try:
         with st.spinner(f"Fetching latest available prices for up to {count} symbols…"):
-            symbols = list(dict.fromkeys(get_universe(universe_name, watchlist_text)[:count] + list(entries)))
+            symbols = list(dict.fromkeys(["INTC"] + list(entries) + get_universe(universe_name, watchlist_text)[:count]))
             results = {}
             failures = []
             progress = st.progress(0)
@@ -123,6 +123,12 @@ def render(tab_id, universe_name, watchlist_text, get_universe, intraday=False):
         for r in rows:
             r["Options venue"]="thinkorswim — not connected"
         buy = pd.DataFrame([dict(r, Signal="BUY WATCH") for r in rows if r["Deviation %"] <= -buy_threshold and r.get("Day change %") is not None and r["Day change %"] <= max_rebound])
+        st.subheader("Priority research — large daily declines")
+        priority=[r for r in rows if r.get("Day change %") is not None and r["Day change %"]<=-15 and r["Price $"]>=5 and r["Avg daily $ volume"]>=10_000_000]
+        if priority:
+            st.dataframe(pd.DataFrame(priority)[["Ticker","Price $","Previous close $","Day change %","Deviation %","Quality","Quality notes","Price timestamp"]],hide_index=True,use_container_width=True)
+        else:
+            st.info("No qualifying large daily declines in this scan.")
         a_candidates=buy[buy["Quality"]=="A · TECHNICAL ONLY"] if not buy.empty else buy
         st.subheader(f"A-grade technical BUY shortlist ({len(a_candidates)})")
         st.caption("Provisional technical grade only; news and thinkorswim options chain are NOT verified.")
