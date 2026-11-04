@@ -10,7 +10,9 @@ class ShortlistTests(unittest.TestCase):
         second['contractSymbol']=second['contractSymbol'][:-8]+'00090000'
         chain.append(second)
         rows=run_call_research(data)['rows']
+        for r in rows:r['Target scenario IV -25% profit $']=-1
         ideas=shortlist_ideas(rows)
+        self.assertTrue(any(r['Direction']=='Bull call debit spread' for r in ideas))
         self.assertEqual(len({r['Ticker'] for r in ideas}),len(ideas))
         for idea in ideas:
             self.assertTrue(0<=idea['Estimated expiration POP %']<=100)
