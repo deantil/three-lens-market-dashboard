@@ -2,7 +2,7 @@ name: Credit spread scanner checks
 on:
   push:
     branches: [main, 'project-t/**']
-    paths: ['credit_spread_*.py', 'kotegawa_options_*.py', 'test_kotegawa*.py', 'test_credit_spread*.py', 'streamlit_app.py', 'requirements.txt', '.github/workflows/credit-spread-checks.yml']
+    paths: ['credit_spread_*.py', 'kotegawa_options_*.py', 'long_call_*.py', 'test_long_call*.py', 'test_kotegawa*.py', 'test_credit_spread*.py', 'streamlit_app.py', 'requirements.txt', '.github/workflows/credit-spread-checks.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
-      - run: python -m unittest test_credit_spreads test_credit_spread_ui test_credit_spread_success_ui test_kotegawa_options test_kotegawa_options_ui -v
+      - run: python -m unittest test_credit_spreads test_credit_spread_ui test_credit_spread_success_ui test_kotegawa_options test_kotegawa_options_ui test_long_calls test_long_call_ui -v
       - name: Connected live stock to options probe
         run: |
           python - <<'PY'

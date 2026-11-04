@@ -2,7 +2,7 @@ name: Credit spread market data feed
 on:
   push:
     branches: [main]
-    paths: ['credit_spread_*.py', 'kotegawa_options_*.py', '.github/workflows/credit-spread-feed.yml']
+    paths: ['credit_spread_*.py', 'kotegawa_options_*.py', 'long_call_*.py', '.github/workflows/credit-spread-feed.yml']
   schedule:
     - cron: '*/15 * * * 1-5'
   workflow_dispatch:
@@ -22,10 +22,12 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements.txt
       - run: python credit_spread_snapshot.py
+      - run: python long_call_snapshot.py
       - name: Publish public snapshot on isolated branch
         run: |
           mkdir -p /tmp/credit-feed
           cp credit_market_snapshot.json /tmp/credit-feed/
+          cp long_call_market_snapshot.json.gz /tmp/credit-feed/
           cd /tmp/credit-feed
           git init
           git config user.name 'github-actions[bot]'
@@ -37,7 +39,7 @@ jobs:
           else
             git checkout --orphan credit-scan-state
           fi
-          git add credit_market_snapshot.json
+          git add credit_market_snapshot.json long_call_market_snapshot.json.gz
           git commit -m 'Refresh timestamped public credit spread market data'
           git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin HEAD:credit-scan-state
         env:

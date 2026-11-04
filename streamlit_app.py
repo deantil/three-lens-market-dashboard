@@ -17,6 +17,7 @@ import intraday_actions
 import dual_signal_scan
 import credit_spread_scanner
 import kotegawa_options_scanner
+import long_call_scanner
 
 st.set_page_config(page_title="Three Lens Market Dashboard", page_icon="📈", layout="wide")
 
@@ -358,7 +359,9 @@ tab1, tab2, tab6, tab7, credit_tab = st.tabs(["1 · Trader breakout", "2 · Nirv
 with credit_tab:
     credit_spread_scanner.render()
 with tab6:
-    kotegawa_options_scanner.render()
+    long_call_scanner.render()
+    with st.expander('Previous defined-risk credit spread workflow'):
+        kotegawa_options_scanner.render()
     with st.expander('Existing stock discovery and recorded-position tools'):
         dual_signal_scan.render("tab11", universe_name, watchlist_text, get_universe, intraday=False)
 
