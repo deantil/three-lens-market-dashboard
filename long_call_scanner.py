@@ -144,11 +144,18 @@ def shortlist_ideas(rows, rate=.04, limit=50):
                         value=black_scholes_call(spot,long['Strike'],remaining,iv*mult,rate)['price']-black_scholes_call(spot,short['Strike'],remaining,iv*mult,rate)['price']
                         r[label+' scenario'+suffix+' profit $']=round(value*100-risk,2)
                 r['IV %']=iv*100
+                r['Expiration target profit $']=min(max(r['SMA25 scenario target $']-long['Strike'],0),width)*100-risk
+                r['Breakeven rise from reference %']=(r['Expiration breakeven $']/r['Underlying reference $']-1)*100
+                r['Estimated model value / share $']=black_scholes_call(r['Underlying reference $'],long['Strike'],r['DTE']/365,iv,rate)['price']-black_scholes_call(r['Underlying reference $'],short['Strike'],r['DTE']/365,iv,rate)['price']
+                r['IV / historical volatility ratio']=(iv*100/r['Historical volatility 20d %'] if r.get('Historical volatility 20d %') else None)
                 r['Estimated expiration POP %']=pop(r['Underlying reference $'],r['Expiration breakeven $'],r['DTE'],iv)
                 r['Model assumptions']='Vertical: common mean leg IV, European, no dividends; not broker POP'
                 # Long-call-only fields do not describe the net vertical.
-                for key in ['Estimated delta','Estimated gamma','Estimated theta $/day','Estimated vega $/IV point','Estimated rho $/rate point','Ask entry / share $','Premium $','Call comparison rank']:
+                for key in ['Estimated delta','Estimated gamma','Estimated theta $/day','Estimated vega $/IV point','Estimated rho $/rate point','Ask entry / share $','Premium $','Call comparison rank','Bid / share $','Moneyness','Moneyness spot/strike %','Intrinsic value / share $','Ask extrinsic value / share $']:
                     r.pop(key,None)
+                for label in ['Target','Flat','Down 10%']:
+                    for suffix in ['', ' IV -25%']:
+                        r.pop(label+' scenario'+suffix+' value / share $',None)
                 candidates.append(r)
     eligible=[]
     for r in candidates:
