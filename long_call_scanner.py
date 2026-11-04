@@ -14,7 +14,7 @@ VERSION='long-calls-v4.0-top50'
 
 @st.cache_data(ttl=60,show_spinner=False)
 def load_call_feed():
-    r=requests.get('https://raw.githubusercontent.com/deantil/three-lens-market-dashboard/credit-scan-state/long_call_market_snapshot.json.gz',timeout=35)
+    r=requests.get('https://raw.githubusercontent.com/deantil/three-lens-market-dashboard/credit-scan-state/long_call_market_snapshot.json.gz',params={'refresh':int(datetime.now(timezone.utc).timestamp())//60},headers={'Cache-Control':'no-cache'},timeout=35)
     r.raise_for_status()
     return json.loads(gzip.decompress(r.content))
 
