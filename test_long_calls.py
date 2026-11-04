@@ -33,6 +33,22 @@ class LongCallTests(unittest.TestCase):
         self.assertAlmostEqual(row['Expiration breakeven $'], 125.02)
         self.assertEqual(row['Expiration target profit $'], -502.)
 
+    def test_gamma_rho_finite_differences_and_pricing_breakdown(self):
+        model = black_scholes_call(100,100,1,.2,.05)
+        gamma = (black_scholes_call(100.01,100,1,.2,.05)['delta']-
+                 black_scholes_call(99.99,100,1,.2,.05)['delta'])/.02
+        rho = (black_scholes_call(100,100,1,.2,.05001)['price']-
+               black_scholes_call(100,100,1,.2,.04999)['price'])/.00002/100
+        self.assertAlmostEqual(model['gamma'], gamma, places=7)
+        self.assertAlmostEqual(model['rho'], rho, places=7)
+        row = self.analyze([call(95,ask=10,bid=9.8)])[0]
+        self.assertEqual(row['Moneyness'], 'ITM')
+        self.assertEqual(row['Intrinsic value / share $'],5)
+        self.assertEqual(row['Ask extrinsic value / share $'],5)
+        self.assertAlmostEqual(row['Bid/ask width % of ask'],2)
+        self.assertGreater(row['Estimated gamma'],0)
+        self.assertGreater(row['Estimated rho $/rate point'],0)
+
     def test_halfway_scenarios_iv_shock_and_expiry_target(self):
         row = self.analyze([call()])[0]
         self.assertEqual(row['Scenario horizon days'], 37)

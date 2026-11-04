@@ -1,6 +1,7 @@
 """Public research feed: market caps for all setups, all available 60–90 DTE calls."""
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 import gzip
 import json
 import math
@@ -25,17 +26,18 @@ def collect_calls(signal):
     symbol=signal['Ticker']
     ticker=yf.Ticker(symbol)
     now=datetime.now(timezone.utc)
+    market_day=now.astimezone(ZoneInfo('America/New_York')).date()
     out={'retrieved_utc':now.isoformat(),'chains':{},'errors':[], 'spot':None}
     try:
         hist=ticker.history(period='3mo',auto_adjust=True,timeout=12)
         if hist.empty: raise ValueError('No current price history')
         close=hist['Close'].dropna()
-        if (now.date()-close.index[-1].date()).days>4: raise ValueError('Stale underlying price')
+        if (market_day-close.index[-1].date()).days>4: raise ValueError('Stale underlying price')
         out['spot']=float(close.iloc[-1])
         out['price_timestamp']=str(close.index[-1])
         hv=float(close.pct_change().dropna().tail(20).std()*math.sqrt(252))
         out['historical_volatility_20d']=hv if math.isfinite(hv) else None
-        expirations=[e for e in ticker.options if 60 <= (datetime.fromisoformat(e).date()-now.date()).days <= 90]
+        expirations=[e for e in ticker.options if 60 <= (datetime.fromisoformat(e).date()-market_day).days <= 90]
         out['expirations_requested']=len(expirations)
         for exp in expirations:
             try:
@@ -48,7 +50,7 @@ def collect_calls(signal):
 
 def main():
     stock_snapshot=load_stock_snapshot()
-    selection=select_stock_signals(stock_snapshot['rows'],stock_snapshot.get('generated_at_utc'))
+    selection=select_stock_signals(stock_snapshot['rows'],stock_snapshot.get('generated_at_utc'),today=datetime.now(ZoneInfo('America/New_York')).date())
     companies={}
     with ThreadPoolExecutor(max_workers=6) as pool:
         for symbol, info in pool.map(collect_company,[s['Ticker'] for s in selection['signals']]): companies[symbol]=info

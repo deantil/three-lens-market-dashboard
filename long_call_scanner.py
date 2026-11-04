@@ -1,5 +1,6 @@
 """Market-cap-first Kotegawa stock discovery and purchased-call research."""
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 import gzip
 import json
 import pandas as pd
@@ -18,8 +19,9 @@ def load_call_feed():
 
 def run_call_research(feed,fees=1.3,rate=.04,now=None):
     now=now or datetime.now(timezone.utc)
+    market_day=now.astimezone(ZoneInfo('America/New_York')).date()
     snapshot=feed['stock_snapshot']
-    selection=select_stock_signals(snapshot['rows'],snapshot.get('generated_at_utc'),today=now.date())
+    selection=select_stock_signals(snapshot['rows'],snapshot.get('generated_at_utc'),today=market_day)
     signals=sorted(selection['signals'],key=lambda s:(-(feed.get('companies',{}).get(s['Ticker'],{}).get('market_cap') or 0),s['Ticker']))
     stocks,contracts=[],[]
     for rank,signal in enumerate(signals,1):
@@ -39,7 +41,7 @@ def run_call_research(feed,fees=1.3,rate=.04,now=None):
             if not data.get('spot') or not data.get('chains'): raise ValueError('No option chains or underlying price')
             found=[]
             for exp,chain in data['chains'].items():
-                result=analyze_calls(symbol,data['spot'],signal['SMA25 $'],exp,chain,today=now.date(),rate=rate,fees=fees)
+                result=analyze_calls(symbol,data['spot'],signal['SMA25 $'],exp,chain,today=market_day,rate=rate,fees=fees)
                 for option in result:
                     option.update({'Market cap rank':rank,'Market cap USD':row['Market cap USD'],
                         'Stock signal deviation %':signal['Deviation %'],'Stock snapshot price $':signal['Price $'],
@@ -52,10 +54,18 @@ def run_call_research(feed,fees=1.3,rate=.04,now=None):
                         'Event review':'Earnings/dividends/catalyst require confirmation',
                         'Data source':'Yahoo public background feed; Schwab not connected'})
                     stressed=option.get('Target scenario IV -25% profit $')
+                    hv=data.get('historical_volatility_20d')
+                    option['IV / historical volatility ratio']=(option['IV %']/100/hv if hv and hv>0 and option.get('IV %') else None)
+                    option['Breakeven rise from reference %']=round((option['Expiration breakeven $']/data['spot']-1)*100,2)
+                    for source,label in [('earnings_timestamp','Earnings date UTC (provider, unverified)'),('ex_dividend_timestamp','Ex dividend date UTC (provider, unverified)')]:
+                        try: option[label]=datetime.fromtimestamp(company[source],timezone.utc).date().isoformat()
+                        except (KeyError,ValueError,TypeError,OverflowError): option[label]='Unavailable'
                     option['Research assessment']=('REVIEW — liquidity concerns' if option.get('Liquidity concerns') else
                         'REVIEW — model unavailable' if stressed is None else
                         'REVIEW — recovery scenario survives IV decline; thesis/events unconfirmed' if stressed>0 else
                         'UNFAVORABLE under stressed recovery scenario')
+                    if option['Current reference deviation %'] > -20:
+                        option['Research assessment']='STOCK SIGNAL NEEDS RECHECK — current reference no longer 20% below snapshot SMA25'
                     found.append(option)
             found.sort(key=lambda r:(r.get('Liquidity concerns',True),r.get('Target scenario IV -25% profit $') is None,
                 -(r.get('Target scenario IV -25% profit $') or 0),r['Expiration'],r['Strike']))

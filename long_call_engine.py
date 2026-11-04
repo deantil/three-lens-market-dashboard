@@ -22,11 +22,15 @@ def _normal(value):
 
 
 def black_scholes_call(spot, strike, years, iv, rate=.04):
-    """Price/share, delta, theta/share/calendar-day, vega/share per IV point."""
+    """Price/share, delta, gamma; theta/day, vega/IV point, rho/rate point.
+
+    All values are per share; IV/rate points mean a one percentage-point move.
+    """
     if any(_number(v) is None for v in (spot, strike, years, iv, rate)) or min(spot, strike, iv) <= 0 or years < 0:
         raise ValueError('Model requires finite positive spot, strike and IV')
     if years == 0:
-        return {'price': max(spot-strike, 0.), 'delta': None, 'theta': None, 'vega': None}
+        return {'price': max(spot-strike, 0.), 'delta': None, 'gamma': None,
+                'theta': None, 'vega': None, 'rho': None}
     root = math.sqrt(years)
     d1 = (math.log(spot/strike)+(rate+.5*iv*iv)*years)/(iv*root)
     d2 = d1-iv*root
@@ -34,8 +38,10 @@ def black_scholes_call(spot, strike, years, iv, rate=.04):
     discount = math.exp(-rate*years)
     return {'price': max(0., spot*_normal(d1)-strike*discount*_normal(d2)),
             'delta': _normal(d1),
+            'gamma': density/(spot*iv*root),
             'theta': (-spot*density*iv/(2*root)-rate*strike*discount*_normal(d2))/365,
-            'vega': spot*density*root/100}
+            'vega': spot*density*root/100,
+            'rho': strike*years*discount*_normal(d2)/100}
 
 
 def analyze_calls(symbol, spot, target, expiration, calls, today=None, rate=.04, fees=1.3):
@@ -70,8 +76,10 @@ def analyze_calls(symbol, spot, target, expiration, calls, today=None, rate=.04,
             continue
         premium = ask*100
         cost = premium+fees
+        intrinsic = max(spot-strike, 0.)
         oi, volume = _number(call.get('openInterest')), _number(call.get('volume'))
         problems = []
+        if ask < intrinsic: problems.append('Ask below intrinsic; stock/option quotes may be inconsistent')
         if bid is None or bid <= 0: problems.append('Missing/zero bid')
         elif bid > ask: problems.append('Crossed bid/ask')
         elif (ask-bid)/ask > .25: problems.append('Bid/ask wider than 25% of ask')
@@ -80,6 +88,11 @@ def analyze_calls(symbol, spot, target, expiration, calls, today=None, rate=.04,
         row = {'Ticker': symbol, 'Direction': 'Long call', 'Expiration': expiration, 'DTE': dte,
                'Strike': strike, 'Contracts': 1, 'Call contract': call['contractSymbol'],
                'Ask entry / share $': ask, 'Bid / share $': bid,
+               'Bid/ask width % of ask': (ask-bid)/ask*100 if bid is not None and bid >= 0 else None,
+               'Moneyness': 'ITM' if spot > strike else 'OTM' if spot < strike else 'ATM',
+               'Moneyness spot/strike %': (spot/strike-1)*100,
+               'Intrinsic value / share $': intrinsic,
+               'Ask extrinsic value / share $': ask-intrinsic,
                'Premium $': round(premium, 2), 'Round-trip fees $': fees,
                'Max loss incl fees $': round(cost, 2), 'Expiration breakeven $': strike+cost/100,
                'Stock reference $': spot, 'Stock target $': target,
@@ -87,7 +100,9 @@ def analyze_calls(symbol, spot, target, expiration, calls, today=None, rate=.04,
                'Liquidity': 'REVIEW — '+ '; '.join(problems) if problems else 'Pass: OI ≥100, volume ≥10, bid/ask ≤25% of ask',
                'Liquidity concerns': bool(problems), 'Scenario horizon days': horizon,
                'Estimated model value / share $': None,
-               'Estimated delta': None, 'Estimated theta $/day': None, 'Estimated vega $/IV point': None,
+               'Estimated delta': None, 'Estimated gamma': None,
+               'Estimated theta $/day': None, 'Estimated vega $/IV point': None,
+               'Estimated rho $/rate point': None,
                'Greek source': 'Black-Scholes estimates per share; not broker Greeks; no dividends',
                'Model assumptions': 'European call; no dividends; rate '+str(rate)+'; IV unchanged or reduced 25% relative; no execution guarantee',
                'Expiration target profit $': round(max(target-strike, 0)*100-cost, 2),
@@ -107,8 +122,9 @@ def analyze_calls(symbol, spot, target, expiration, calls, today=None, rate=.04,
             try:
                 model = black_scholes_call(spot, strike, dte/365, iv, rate)
                 row.update({'Estimated model value / share $': model['price'],
-                            'Estimated delta': model['delta'], 'Estimated theta $/day': model['theta'],
-                            'Estimated vega $/IV point': model['vega'], 'Model status': 'ESTIMATE — assumptions require review'})
+                            'Estimated delta': model['delta'], 'Estimated gamma': model['gamma'],
+                            'Estimated theta $/day': model['theta'], 'Estimated vega $/IV point': model['vega'],
+                            'Estimated rho $/rate point': model['rho'], 'Model status': 'ESTIMATE — assumptions require review'})
                 for name, scenario_spot in scenarios:
                     for multiplier, suffix in [(1., ''), (.75, ' IV -25%')]:
                         value = black_scholes_call(scenario_spot, strike, remaining, iv*multiplier, rate)['price']
