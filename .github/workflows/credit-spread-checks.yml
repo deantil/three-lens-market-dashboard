@@ -2,7 +2,7 @@ name: Credit spread scanner checks
 on:
   push:
     branches: [main, 'project-t/**']
-    paths: ['credit_spread_*.py', 'kotegawa_options_*.py', 'long_call_*.py', 'test_long_call*.py', 'test_kotegawa*.py', 'test_credit_spread*.py', 'streamlit_app.py', 'requirements.txt', '.github/workflows/credit-spread-checks.yml']
+    paths: ['credit_spread_*.py', 'kotegawa_options_*.py', 'long_call_*.py', 'test_long_call*.py', 'test_top50.py', 'test_kotegawa*.py', 'test_credit_spread*.py', 'streamlit_app.py', 'requirements.txt', '.github/workflows/credit-spread-checks.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,7 +16,26 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
-      - run: python -m unittest test_credit_spreads test_credit_spread_ui test_credit_spread_success_ui test_kotegawa_options test_kotegawa_options_ui test_long_calls test_long_call_ui -v
+      - run: python -m unittest test_credit_spreads test_credit_spread_ui test_credit_spread_success_ui test_kotegawa_options test_kotegawa_options_ui test_long_calls test_long_call_ui test_top50 -v
+      - name: Top 50 live feed and render probe
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          from unittest.mock import patch
+          from streamlit.testing.v1 import AppTest
+          from long_call_scanner import load_call_feed, run_call_research, shortlist_ideas
+          feed=load_call_feed()
+          report=run_call_research(feed)
+          ideas=shortlist_ideas(report['rows'])
+          assert len(ideas)<=50 and len({r['Ticker'] for r in ideas})==len(ideas)
+          assert all(r['Direction'] in ('Long call','Bull call debit spread') for r in ideas)
+          app=AppTest.from_string('from long_call_scanner import render\nrender()', default_timeout=120).run()
+          with patch('long_call_scanner.load_call_feed',return_value=feed):
+              app.button[0].click().run()
+          assert not app.exception, app.exception
+          print('TOP50_FEED_RESULT',len(report['rows']),len(ideas),dict(Counter(r['Direction'] for r in ideas)))
+          print('TOP50_SAMPLE', [(r['Ticker'],r['Direction'],r['Expiration']) for r in ideas[:3]])
+          PY
       - name: Connected live stock to options probe
         run: |
           python - <<'PY'
