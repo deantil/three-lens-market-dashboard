@@ -9,14 +9,32 @@ import requests
 import streamlit as st
 from kotegawa_options_engine import select_stock_signals
 from long_call_engine import analyze_calls, black_scholes_call
+from schwab_market_data import render_connection, SchwabDataError
 
-VERSION='long-calls-v4.0-top50'
+VERSION='long-calls-v4.1-schwab'
 
 @st.cache_data(ttl=60,show_spinner=False)
 def load_call_feed():
     r=requests.get('https://raw.githubusercontent.com/deantil/three-lens-market-dashboard/credit-scan-state/long_call_market_snapshot.json.gz',params={'refresh':int(datetime.now(timezone.utc).timestamp())//60},headers={'Cache-Control':'no-cache'},timeout=35)
     r.raise_for_status()
     return json.loads(gzip.decompress(r.content))
+
+def load_schwab_feed(client, base, progress=None):
+    """Keep stock discovery/market caps separate; replace every option chain.
+    Failure never reuses Yahoo option rows while Schwab is selected."""
+    now=datetime.now(timezone.utc)
+    snapshot=base['stock_snapshot']
+    selection=select_stock_signals(snapshot['rows'],snapshot.get('generated_at_utc'),today=now.astimezone(ZoneInfo('America/New_York')).date())
+    signals=[s for s in selection['signals'] if s['Direction']=='Bull put']
+    feed={**base,'calls':{},'collected_utc':now.isoformat()}
+    for i,signal in enumerate(signals):
+        symbol=signal['Ticker']
+        try:feed['calls'][symbol]=client.calls(symbol)
+        except SchwabDataError as exc:
+            if exc.status in (400,401,403,429):raise
+            feed['calls'][symbol]={'retrieved_utc':datetime.now(timezone.utc).isoformat(),'chains':{},'errors':['Schwab data unavailable for this symbol; no fallback used'],'source':'Schwab Market Data API'}
+        if progress:progress((i+1)/max(1,len(signals)),f'Schwab call chains: {i+1}/{len(signals)}')
+    return feed
 
 def run_call_research(feed,fees=1.3,rate=.04,now=None):
     now=now or datetime.now(timezone.utc)
@@ -48,12 +66,12 @@ def run_call_research(feed,fees=1.3,rate=.04,now=None):
                         'Stock signal deviation %':signal['Deviation %'],'Stock snapshot price $':signal['Price $'],
                         'Underlying reference $':data['spot'],'Current reference deviation %':round((data['spot']/signal['SMA25 $']-1)*100,2),
                         'SMA25 scenario target $':signal['SMA25 $'],'Stock price timestamp':data.get('price_timestamp'),
-                        'Option retrieved UTC':data['retrieved_utc'],'Quote freshness':'Unverified / delayed; retrieval is not quote time',
+                        'Option retrieved UTC':data['retrieved_utc'],'Quote freshness':('Schwab quote timestamps checked within 20 minutes; delayed entitlement='+str(data.get('is_delayed')) if data.get('source') else 'Unverified / delayed; retrieval is not quote time'),
                         'Historical volatility 20d %':(data.get('historical_volatility_20d') or 0)*100 or None,
                         'Earnings timestamp (unverified)':company.get('earnings_timestamp'),
                         'Ex dividend timestamp (unverified)':company.get('ex_dividend_timestamp'),
                         'Event review':'Earnings/dividends/catalyst require confirmation',
-                        'Data source':'Yahoo public background feed; Schwab not connected'})
+                        'Data source':data.get('source','Yahoo public background feed; Schwab not connected')})
                     stressed=option.get('Target scenario IV -25% profit $')
                     hv=data.get('historical_volatility_20d')
                     option['IV / historical volatility ratio']=(option['IV %']/100/hv if hv and hv>0 and option.get('IV %') else None)
@@ -182,6 +200,9 @@ def render():
     st.caption(VERSION+' · Purchased calls for bullish setups · Research exercise · No account-size, premium or per-trade risk limits · No orders')
     st.write('Discover stock setups automatically, sort by market capitalization from largest to smallest, then analyze every available standard call in the 60–90-day expiration window for every bullish setup. Bearish overextensions remain visible but do not produce call-buy candidates.')
     st.caption('Larger market capitalization does not mean better value or a better trade. Missing market caps sort last. Stock rules remain the transparent Kotegawa-inspired SMA25, price, dollar-volume and reference reward/risk rules; they are not a verified trading edge.')
+    render_connection(st)
+    source=st.selectbox('Option-chain source',['Schwab market data','Yahoo delayed research'],index=0 if st.session_state.get('schwab_verified') else 1)
+    st.caption('Stock discovery and market-cap metadata still use the background stock feed. Selecting Schwab replaces option-chain data only; it does not connect TOS watchlists or alerts.')
     with st.form('long_call_form'):
         a,b=st.columns(2)
         fees=a.number_input('Estimated opening + closing fees per call ($)',min_value=0.,value=1.3,step=.1)
@@ -192,7 +213,14 @@ def render():
         try:
             load_call_feed.clear()
             with st.spinner('Loading full stock discovery and available 60–90-day call chains…'):
-                st.session_state['long_call_report']=run_call_research(load_call_feed(),fees,rate/100)
+                feed=load_call_feed()
+                if source=='Schwab market data':
+                    if not st.session_state.get('schwab_verified'):raise ValueError('Complete Connect Schwab market data first')
+                    bar=st.progress(0.,text='Loading Schwab option chains')
+                    feed=load_schwab_feed(st.session_state['schwab_client'],feed,lambda p,m:bar.progress(p,text=m))
+                    bar.empty()
+                st.session_state['long_call_report']=run_call_research(feed,fees,rate/100)
+                st.session_state['long_call_report']['option_source']=source
         except Exception as exc:
             st.session_state.pop('long_call_report',None)
             st.error('DATA UNAVAILABLE — call feed could not load: '+str(exc)[:240])
@@ -200,6 +228,7 @@ def render():
     if not report:
         st.info('Click Run market-cap stock → call analysis. No ticker entry is required. Background collection may be incomplete when a provider fails; coverage is reported explicitly.')
         return
+    st.caption('Option source for this report: '+report.get('option_source','Yahoo delayed research'))
     st.caption(f"Completed UTC: {report['completed_utc']} · Stock snapshot: {report['stock_snapshot_utc']} · Option feed collected: {report['feed_collected_utc']}")
     a,b,c,d=st.columns(4)
     a.metric('Stock histories screened',report['stock_histories_screened']);b.metric('Stock setups',len(report['stocks']))
@@ -231,5 +260,5 @@ def render():
             st.dataframe(frame[[c for c in lead if c in frame]+[c for c in frame if c not in lead]],hide_index=True,use_container_width=True)
         st.download_button('Download all call comparisons',frame.to_csv(index=False),'kotegawa_long_calls.csv','text/csv')
     else: st.info('No usable calls were returned for analysis. Review each stock’s coverage; unavailable data is not a no-opportunity conclusion.')
-    st.warning('A fallen stock can keep falling. A call can lose money even if the stock rises because of premium paid, time decay or falling IV. Earnings, dividends, catalyst, price recovery timing and live broker quotes require confirmation. Data is delayed Yahoo research; Schwab/thinkorswim is not connected. Nothing is automatically approved to buy.')
+    st.warning('A fallen stock can keep falling. A call can lose money even if the stock rises because of premium paid, time decay or falling IV. Earnings, dividends, catalyst, price recovery timing and live broker quotes require confirmation. Check each row’s data source and quote timestamps. Schwab connection does not synchronize TOS watchlists or alerts. Nothing is automatically approved to buy.')
 
