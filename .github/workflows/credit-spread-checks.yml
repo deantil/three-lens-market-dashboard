@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
-      - run: python -m unittest test_credit_spreads test_credit_spread_ui test_credit_spread_success_ui test_kotegawa_options test_kotegawa_options_ui test_long_calls test_long_call_ui -v
+      - run: python -m unittest test_credit_spreads test_credit_spread_ui test_credit_spread_success_ui test_kotegawa_options test_kotegawa_options_ui test_long_calls test_long_call_ui test_top50 -v
       - name: Connected live stock to options probe
         run: |
           python - <<'PY'
