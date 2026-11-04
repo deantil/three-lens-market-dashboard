@@ -34,7 +34,7 @@ class LongCallUI(unittest.TestCase):
     def test_run_button_table_download_without_ticker_or_risk_limit(self):
         app=AppTest.from_string('from long_call_scanner import render\nrender()',default_timeout=30).run()
         self.assertFalse(app.text_area)
-        with patch('long_call_scanner.load_call_feed',return_value=fixture()): app.button[0].click().run()
+        with patch('long_call_scanner.load_call_feed',return_value=fixture()): next(b for b in app.button if b.label=='Run market-cap stock → call analysis').click().run()
         self.assertFalse(app.exception)
         self.assertEqual(len(app.session_state['long_call_report']['rows']),3)
         self.assertTrue(any(b.label=='Download all call comparisons' for b in app.get('download_button')))
