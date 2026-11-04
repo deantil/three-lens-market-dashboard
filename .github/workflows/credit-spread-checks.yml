@@ -2,7 +2,7 @@ name: Credit spread scanner checks
 on:
   push:
     branches: [main, 'project-t/**']
-    paths: ['credit_spread_*.py', 'kotegawa_options_*.py', 'long_call_*.py', 'test_long_call*.py', 'test_top50.py', 'test_kotegawa*.py', 'test_credit_spread*.py', 'streamlit_app.py', 'requirements.txt', '.github/workflows/credit-spread-checks.yml']
+    paths: ['credit_spread_*.py', 'kotegawa_options_*.py', 'long_call_*.py', 'test_long_call*.py', 'test_top50.py', 'schwab_market_data.py', 'test_schwab_market_data.py', 'test_kotegawa*.py', 'test_credit_spread*.py', 'streamlit_app.py', 'requirements.txt', '.github/workflows/credit-spread-checks.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
-      - run: python -m unittest test_credit_spreads test_credit_spread_ui test_credit_spread_success_ui test_kotegawa_options test_kotegawa_options_ui test_long_calls test_long_call_ui test_top50 -v
+      - run: python -m unittest test_credit_spreads test_credit_spread_ui test_credit_spread_success_ui test_kotegawa_options test_kotegawa_options_ui test_long_calls test_long_call_ui test_top50 test_schwab_market_data -v
       - name: Top 50 live feed and render probe
         run: |
           python - <<'PY'
@@ -31,7 +31,7 @@ jobs:
           assert all(r['Direction'] in ('Long call','Bull call debit spread') for r in ideas)
           app=AppTest.from_string('from long_call_scanner import render\nrender()', default_timeout=120).run()
           with patch('long_call_scanner.load_call_feed',return_value=feed):
-              app.button[0].click().run()
+              next(b for b in app.button if b.label=='Run market-cap stock → call analysis').click().run()
           assert not app.exception, app.exception
           print('TOP50_FEED_RESULT',len(report['rows']),len(ideas),dict(Counter(r['Direction'] for r in ideas)))
           print('TOP50_SAMPLE', [(r['Ticker'],r['Direction'],r['Expiration']) for r in ideas[:3]])
