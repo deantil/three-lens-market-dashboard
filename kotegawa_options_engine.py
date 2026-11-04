@@ -4,6 +4,7 @@ Thresholds and the symmetric bearish stop are transparent research heuristics,
 not a reconstruction of Kotegawa's complete system. No network or order access.
 """
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 from decimal import Decimal
 import math
 
@@ -20,10 +21,13 @@ def _finite(value):
 
 def _date(value):
     if isinstance(value, datetime):
-        return value.date()
+        return value.astimezone(ZoneInfo('America/New_York')).date() if value.tzinfo else value.date()
     if isinstance(value, date):
         return value
     try:
+        if 'T' in str(value):
+            stamp=datetime.fromisoformat(str(value).replace('Z','+00:00'))
+            return stamp.astimezone(ZoneInfo('America/New_York')).date() if stamp.tzinfo else stamp.date()
         return date.fromisoformat(str(value)[:10])
     except (TypeError, ValueError):
         return None
@@ -38,7 +42,7 @@ def select_stock_signals(rows, generated_at_utc, today=None, buy_threshold=20.,
     above price; target is SMA25 for both directions. Both require >=2:1 stock
     reference reward/risk. This is distinct from options maximum loss.
     """
-    today = _date(today) or datetime.now(timezone.utc).date()
+    today = _date(today) or datetime.now(ZoneInfo('America/New_York')).date()
     allowed = set(symbols) if symbols is not None else None
     generated = _date(generated_at_utc)
     generation_ok = generated is not None and 0 <= (today-generated).days <= max_age_days

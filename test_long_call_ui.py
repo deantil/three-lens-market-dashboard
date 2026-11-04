@@ -25,6 +25,12 @@ class LongCallUI(unittest.TestCase):
         data['calls']['AAPL']['retrieved_utc']=(datetime.now(timezone.utc)-timedelta(minutes=21)).isoformat()
         report=run_call_research(data)
         self.assertEqual(next(s for s in report['stocks'] if s['Ticker']=='AAPL')['Stock outcome'],'DATA UNAVAILABLE — CALLS')
+    def test_evening_utc_timestamp_is_not_a_future_us_market_day(self):
+        from kotegawa_options_engine import select_stock_signals
+        data=fixture()
+        row=dict(data['stock_snapshot']['rows'][0],**{'Price timestamp':'2026-11-04T00:30:00+00:00'})
+        report=select_stock_signals([row],'2026-11-04T00:30:00+00:00',today=datetime(2026,11,3).date())
+        self.assertEqual(len(report['signals']),1)
     def test_run_button_table_download_without_ticker_or_risk_limit(self):
         app=AppTest.from_string('from long_call_scanner import render\nrender()',default_timeout=30).run()
         self.assertFalse(app.text_area)
